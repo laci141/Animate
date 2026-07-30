@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; padding: 0; background: #16110d; }
+  * { box-sizing: border-box; }
+  a { color: #cfe0a8; text-decoration: none; }
+  a:hover { color: #f0e6d2; }
+  .spbtn { transition: background 0.15s, color 0.15s; }
+</style>
+</head>
+<body>
+
+<div style="min-height:100vh; background: radial-gradient(120% 90% at 50% 0%, #241a13 0%, #16110d 70%); color: #f3ebdd; font-family: 'DM Sans', system-ui, sans-serif; padding: clamp(16px, 3vw, 36px)">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px">
+
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(34px, 5vw, 54px); line-height: 1; letter-spacing: 0.01em; color: #f6efe1">Rootwatch</div>
+        <div style="font-size: 14px; color: rgba(243,235,221,0.55)">A seedling through dawn, noon, dusk and moonlight — above and below the soil.</div>
+      </div>
+      <div style="font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(243,235,221,0.4)">live simulation</div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: stretch">
+
+      <div id="canvas-wrap" style="flex: 1 1 520px; min-width: 280px; border-radius: 26px; overflow: hidden; position: relative; height: clamp(380px, 66vh, 760px); box-shadow: 0 30px 70px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.08)">
+        <canvas id="cv" style="width: 100%; height: 100%; display: block"></canvas>
+        <div style="position: absolute; left: 18px; top: 16px; display: flex; align-items: center; gap: 14px; padding: 9px 16px 10px; border-radius: 16px; background: rgba(255,255,255,0.14); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.28); box-shadow: 0 8px 26px rgba(0,0,0,0.2)">
+          <div style="display: flex; align-items: baseline; gap: 7px">
+            <span style="font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(30,22,16,0.6)">day</span>
+            <span id="hud-day" style="font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; line-height: 1; color: #241a13">0</span>
+          </div>
+          <div style="width: 1px; height: 20px; background: rgba(30,22,16,0.22)"></div>
+          <div style="display: flex; align-items: baseline; gap: 8px">
+            <span id="hud-phase" style="font-size: 14px; font-weight: 500; color: #241a13">Night</span>
+            <span id="hud-clock" style="font-size: 12px; color: rgba(30,22,16,0.55)">04:00</span>
+          </div>
+        </div>
+        <div id="hud-stage" style="position: absolute; right: 18px; bottom: 16px; padding: 8px 14px 9px; border-radius: 14px; background: rgba(255,255,255,0.12); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.24); font-size: 12px; color: rgba(30,22,16,0.75)">Seed</div>
+      </div>
+
+      <div style="flex: 0 1 340px; min-width: 260px; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 26px; background: rgba(255,255,255,0.09); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.22); box-shadow: 0 24px 60px rgba(0,0,0,0.35)">
+
+        <div style="font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(243,235,221,0.5)">conditions</div>
+
+        <div style="display: flex; flex-direction: column; gap: 7px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline">
+            <span style="font-size: 14px; font-weight: 500; color: #f3ebdd">Sunlight</span>
+            <span id="val-sun" style="font-family: 'Instrument Serif', Georgia, serif; font-size: 20px; color: #f2d29b">68</span>
+          </div>
+          <div id="sl-sun" style="position: relative; height: 26px; display: flex; align-items: center; cursor: pointer; touch-action: none">
+            <div style="position: absolute; left: 0; right: 0; height: 6px; border-radius: 99px; background: rgba(255,255,255,0.14)"></div>
+            <div id="sl-sun-fill" style="position: absolute; left: 0; height: 6px; border-radius: 99px; background: linear-gradient(90deg, #e8b06a, #f7dca7); width: 68%"></div>
+            <div id="sl-sun-thumb" style="position: absolute; left: 68%; width: 18px; height: 18px; margin-left: -9px; border-radius: 99px; background: #fdf6e8; box-shadow: 0 3px 10px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(0,0,0,0.06)"></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 7px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline">
+            <span style="font-size: 14px; font-weight: 500; color: #f3ebdd">Water</span>
+            <span id="val-wat" style="font-family: 'Instrument Serif', Georgia, serif; font-size: 20px; color: #a8c9dd">55</span>
+          </div>
+          <div id="sl-wat" style="position: relative; height: 26px; display: flex; align-items: center; cursor: pointer; touch-action: none">
+            <div style="position: absolute; left: 0; right: 0; height: 6px; border-radius: 99px; background: rgba(255,255,255,0.14)"></div>
+            <div id="sl-wat-fill" style="position: absolute; left: 0; height: 6px; border-radius: 99px; background: linear-gradient(90deg, #6f93ac, #b8d8ea); width: 55%"></div>
+            <div id="sl-wat-thumb" style="position: absolute; left: 55%; width: 18px; height: 18px; margin-left: -9px; border-radius: 99px; background: #fdf6e8; box-shadow: 0 3px 10px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(0,0,0,0.06)"></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 7px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline">
+            <span style="font-size: 14px; font-weight: 500; color: #f3ebdd">Nutrients</span>
+            <span id="val-nut" style="font-family: 'Instrument Serif', Georgia, serif; font-size: 20px; color: #b9cf94">52</span>
+          </div>
+          <div id="sl-nut" style="position: relative; height: 26px; display: flex; align-items: center; cursor: pointer; touch-action: none">
+            <div style="position: absolute; left: 0; right: 0; height: 6px; border-radius: 99px; background: rgba(255,255,255,0.14)"></div>
+            <div id="sl-nut-fill" style="position: absolute; left: 0; height: 6px; border-radius: 99px; background: linear-gradient(90deg, #6d8c4a, #c3dc9c); width: 52%"></div>
+            <div id="sl-nut-thumb" style="position: absolute; left: 52%; width: 18px; height: 18px; margin-left: -9px; border-radius: 99px; background: #fdf6e8; box-shadow: 0 3px 10px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(0,0,0,0.06)"></div>
+          </div>
+        </div>
+
+        <div style="height: 1px; background: rgba(255,255,255,0.14); margin: 4px 0"></div>
+
+        <div style="display: flex; flex-direction: column; gap: 9px">
+          <div style="font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(243,235,221,0.5)">time speed</div>
+          <div style="display: flex; gap: 8px">
+            <div id="sp1"  class="spbtn" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,0.2)">1×</div>
+            <div id="sp3"  class="spbtn" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,0.2)">3×</div>
+            <div id="sp10" class="spbtn" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,0.2)">10×</div>
+            <div id="sp30" class="spbtn" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,0.2)">30×</div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 2px">
+          <div style="font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(243,235,221,0.5)">status</div>
+          <div id="status-text" style="font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; line-height: 1.25; color: #f6efe1; text-wrap: pretty; min-height: 54px">Germinating — the seed coat is splitting.</div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 8px">
+          <div id="btn-rain"  style="flex:1;text-align:center;padding:12px 10px;border-radius:14px;cursor:pointer;font-size:14px;font-weight:500;color:#e8f3fa;background:rgba(120,168,196,0.28);border:1px solid rgba(190,224,244,0.35)">Make it rain</div>
+          <div id="btn-reset" style="flex:1;text-align:center;padding:12px 10px;border-radius:14px;cursor:pointer;font-size:14px;font-weight:500;color:#241a13;background:rgba(255,255,255,0.86);border:1px solid rgba(255,255,255,0.5);box-shadow:0 8px 22px rgba(0,0,0,0.28)">Reset</div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 12px; color: rgba(243,235,221,0.55)">
+          <span style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:99px;background:rgba(150,200,235,0.9);display:inline-block"></span>water rising</span>
+          <span style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:99px;background:rgba(170,210,120,0.9);display:inline-block"></span>sugars sinking</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+class Rootwatch {
+  constructor() {
+    /* --- props (DC-equivalent defaults) --- */
+    this.secondsPerDay = 8;
+    this.rootDensity   = 1;
+    this.showWorms     = true;
+
+    /* --- state --- */
+    this.state = {
+      sunlight: 68, water: 55, nutrients: 52,
+      day: 0, speed: 3,
+      phase: 'Night', clock: '04:00',
+      status: 'Germinating — the seed coat is splitting.',
+      stageLabel: 'Seed'
+    };
+
+    this.cv  = $('cv');
+    this.ctx = this.cv.getContext('2d');
+
+    this._setupSlider('sl-sun', 'sunlight');
+    this._setupSlider('sl-wat', 'water');
+    this._setupSlider('sl-nut', 'nutrients');
+
+    [1, 3, 10, 30].forEach(v =>
+      $('sp' + v).addEventListener('click', () => this.setState({ speed: v }))
+    );
+    $('btn-rain').addEventListener('click',  () => { if (this.s) this.s.raining = 9; });
+    $('btn-reset').addEventListener('click', () => this.reset());
+
+    this.measure();
+    this.reset();
+
+    this._ro = new ResizeObserver(() => this.measure());
+    this._ro.observe(this.cv.parentElement || this.cv);
+
+    this._last = performance.now();
+    const loop = (now) => {
+      let dt = Math.min(0.06, (now - this._last) / 1000);
+      this._last = now;
+      let total = dt * this.state.speed;
+      let steps = 0;
+      while (total > 0.0005 && steps < 14) {
+        const st = Math.min(0.075, total);
+        this.update(st);
+        total -= st; steps++;
+      }
+      this.sync();
+      this.draw();
+      this._raf = requestAnimationFrame(loop);
+    };
+    this._raf = requestAnimationFrame(loop);
+  }
+
+  /* ── helpers ─────────────────────────────────────────── */
+  clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  rnd   = (a, b) => a + Math.random() * (b - a);
+  mix   = (c1, c2, t) => {
+    t = this.clamp(t, 0, 1);
+    return [c1[0]+(c2[0]-c1[0])*t, c1[1]+(c2[1]-c1[1])*t, c1[2]+(c2[2]-c1[2])*t];
+  };
+  rgb   = (c, a) => 'rgba('+Math.round(c[0])+','+Math.round(c[1])+','+Math.round(c[2])+','+(a===undefined?1:a)+')';
+
+  /* ── DOM sync ─────────────────────────────────────────── */
+  setState(upd) { Object.assign(this.state, upd); this._syncDOM(); }
+
+  _syncDOM() {
+    const s = this.state;
+    $('hud-day').textContent   = s.day;
+    $('hud-phase').textContent = s.phase;
+    $('hud-clock').textContent = s.clock;
+    $('hud-stage').textContent = s.stageLabel;
+    $('status-text').textContent = s.status;
+    $('val-sun').textContent = s.sunlight;
+    $('val-wat').textContent = s.water;
+    $('val-nut').textContent = s.nutrients;
+    [['sun','sunlight'],['wat','water'],['nut','nutrients']].forEach(([id, key]) => {
+      const pct = s[key] + '%';
+      $('sl-'+id+'-fill').style.width = pct;
+      $('sl-'+id+'-thumb').style.left = pct;
+    });
+    [1, 3, 10, 30].forEach(v => {
+      const el = $('sp'+v), sel = s.speed === v;
+      el.style.background = sel ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.06)';
+      el.style.color      = sel ? '#241a13' : 'rgba(243,235,221,0.75)';
+    });
+  }
+
+  _setupSlider(id, key) {
+    const el = $(id);
+    let dragging = false;
+    const read = ev => {
+      const r = el.getBoundingClientRect();
+      const v = Math.round(this.clamp((ev.clientX - r.left) / r.width, 0, 1) * 100);
+      this.setState({ [key]: v });
+    };
+    el.addEventListener('pointerdown', ev => {
+      dragging = true;
+      try { el.setPointerCapture(ev.pointerId); } catch(_) {}
+      read(ev);
+    });
+    el.addEventListener('pointermove', ev => { if (dragging) read(ev); });
+    el.addEventListener('pointerup',   ()  => { dragging = false; });
+  }
+
+  /* ── canvas sizing ────────────────────────────────────── */
+  measure() {
+    const cv = this.cv, dpr = Math.min(2, window.devicePixelRatio || 1);
+    const r  = cv.getBoundingClientRect();
+    this.W = Math.max(240, r.width);
+    this.H = Math.max(240, r.height);
+    cv.width  = Math.round(this.W * dpr);
+    cv.height = Math.round(this.H * dpr);
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.horizon = this.H * 0.56;
+
+    /* offscreen canvas for light-ray blur pass */
+    this.rayCv = document.createElement('canvas');
+    this.rayCv.width  = Math.round(this.W);
+    this.rayCv.height = Math.round(this.horizon + 40);
+    this.rayCtx = this.rayCv.getContext('2d');
+
+    if (this.s) {
+      this.s.speckles = this._makeSpeckles();
+      this.s.stars    = this._makeStars();
+    }
+  }
+
+  _makeSpeckles() {
+    const out = [], soilH = this.H - this.horizon;
+    const pal = [[92,66,46],[140,106,72],[61,43,30],[176,148,112],[110,92,58]];
+    for (let i = 0; i < 1100; i++)
+      out.push({ x: Math.random()*this.W, y: this.horizon + Math.pow(Math.random(),0.85)*soilH,
+                 r: this.rnd(0.5,2.1), c: pal[(Math.random()*pal.length)|0],
+                 a: this.rnd(0.15,0.55), organic: Math.random()<0.18 });
+    return out;
+  }
+  _makeStars() {
+    const out = [];
+    for (let i = 0; i < 70; i++)
+      out.push({ x: Math.random()*this.W, y: Math.random()*this.horizon*0.8,
+                 r: this.rnd(0.4,1.25), ph: this.rnd(0,6.3) });
+    return out;
+  }
+
+  /* ── reset ────────────────────────────────────────────── */
+  reset() {
+    const sx = this.W * 0.44, sy = this.horizon + 26;
+    this.s = {
+      t: 6.0, germ: 0, stemAcc: 0, nextLeaf: 16, wormT: 4, waterT: 0, sugarT: 0,
+      stem: [{ x: sx, y: sy, w: 6.4, mw: 6.4, light: 0.6 }],
+      stemAngle: -Math.PI/2, stemLen: 0, capped: false,
+      seed: { x: sx, y: sy }, leaves: [], fruits: [], flowerT: 0,
+      roots: [{ pts:[{x:sx, y:sy+2, w:6.4}], ang:Math.PI/2, order:0, w:6.4, alive:true, acc:0, len:0, brown:0 }],
+      parts: [], worms: [], drops: [], seeps: [], ripples: [], rainT: 14, raining: 0,
+      speckles: this._makeSpeckles(), stars: this._makeStars(), draw: []
+    };
+    this.setState({ day: 0 });
+  }
+
+  /* ── time helpers ─────────────────────────────────────── */
+  spd()     { return this.secondsPerDay; }
+  dayFrac() { return (this.s.t / this.spd()) % 1; }
+
+  sunCurve(f) {
+    const a = 0.22, b = 0.86;
+    if (f < a || f > b) return 0;
+    return Math.pow(Math.sin(Math.PI*(f-a)/(b-a)), 0.85);
+  }
+  goldenness(f) {
+    const bump = (a,b) => (f>a&&f<b) ? Math.sin(Math.PI*(f-a)/(b-a)) : 0;
+    return Math.max(bump(0.2,0.38), bump(0.68,0.88));
+  }
+  moonPhase() {
+    const d = Math.floor(this.s.t / this.spd()) % 8, p = d/8;
+    return { p, k: 1-Math.abs(1-2*p), waxing: p<0.5 };
+  }
+  phaseName(f) {
+    if (f<0.20) return 'Night';
+    if (f<0.30) return 'Dawn';
+    if (f<0.45) return 'Morning';
+    if (f<0.58) return 'Noon';
+    if (f<0.74) return 'Afternoon';
+    if (f<0.84) return 'Evening';
+    if (f<0.92) return 'Dusk';
+    return 'Night';
+  }
+  clockStr(f) {
+    const h = Math.floor(f*24), m = Math.floor((f*24-h)*60/5)*5;
+    return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+  }
+
+  /* ── environment ─────────────────────────────────────── */
+  env() {
+    const f = this.dayFrac(), c = this.sunCurve(f), slider = this.state.sunlight/100;
+    return { L: slider, Lnow: slider*c, day: c, night: 1-Math.min(1,c*3.2),
+             W: this.state.water/100, N: this.state.nutrients/100, f };
+  }
+
+  stage() {
+    const s = this.s;
+    if (s.germ < 1) return 'Germinating';
+    if (s.fruits.some(fr => fr.ripe > 0.6)) return 'Ripe fruit';
+    if (s.fruits.length) return s.fruits.some(fr => fr.set > 0) ? 'Fruiting' : 'Flowering';
+    if (s.capped) return 'Mature';
+    return 'Vegetative';
+  }
+
+  statusFor(e) {
+    const s = this.s;
+    if (s.germ < 1) return 'Germinating — the seed coat is splitting.';
+    if (s.raining > 0) return 'Rain — drops soak in and the roots start drinking.';
+    if (e.night > 0.75) return 'Night — leaves folded, sugars still travelling down to the roots.';
+    if (e.W < 0.2) return 'Thirsty — leaves are curling and the roots are diving for water.';
+    if (e.W > 0.88) return 'Waterlogged — root tips are browning and leaf edges yellow.';
+    if (e.L < 0.25) return 'Stretching for light — move the seedling somewhere brighter.';
+    if (e.N < 0.25) return 'Hungry — the oldest leaves are surrendering their nitrogen.';
+    if (s.fruits.some(fr => fr.ripe > 0.6)) return 'Fruit is ripe — the season has paid off.';
+    if (s.fruits.length) return 'Setting fruit — sugars are pouring into the young berries.';
+    if (e.f > 0.45 && e.f < 0.6 && e.L > 0.6) return 'Full noon sun — photosynthesis at its peak.';
+    if (e.N > 0.8 && e.L > 0.55) return 'Lush and leafy — so well fed the roots barely bother.';
+    if (e.L > 0.6 && e.W > 0.35 && e.W < 0.8) return 'Thriving — short internodes, deep green leaves.';
+    return 'Growing steadily under fair conditions.';
+  }
+
+  sync() {
+    const f = this.dayFrac(), day = Math.floor(this.s.t / this.spd());
+    const e = this.env();
+    const ph = this.phaseName(f), ck = this.clockStr(f);
+    const st = this.statusFor(e), sg = this.stage();
+    const n = {};
+    if (day !== this.state.day) n.day = day;
+    if (ph  !== this.state.phase) n.phase = ph;
+    if (ck  !== this.state.clock) n.clock = ck;
+    if (st  !== this.state.status) n.status = st;
+    if (sg  !== this.state.stageLabel) n.stageLabel = sg;
+    if (Object.keys(n).length) this.setState(n);
+  }
+
+  /* ── update ───────────────────────────────────────────── */
+  update(dt) {
+    const s = this.s, e = this.env(), spd = this.spd();
+    const rootDens = this.rootDensity;
+    s.t += dt;
+    const dayStep = dt / spd;
+
+    if (s.germ < 1) s.germ = Math.min(1, s.germ + dt/2.6);
+
+    /* weather */
+    if (s.raining > 0) s.raining = Math.max(0, s.raining - dt);
+    else {
+      s.rainT -= dt*(0.4+1.6*e.W);
+      if (s.rainT <= 0) { s.rainT = this.rnd(18,46); s.raining = this.rnd(5,12)*(0.6+e.W); }
+    }
+    if (s.raining > 0) {
+      const n = Math.ceil(dt*90*(0.5+e.W));
+      for (let i=0;i<n;i++) s.drops.push({x:Math.random()*this.W, y:-this.rnd(0,40), v:this.rnd(320,460), len:this.rnd(7,15)});
+    }
+    for (let i=s.drops.length-1;i>=0;i--) {
+      const d=s.drops[i]; d.y+=d.v*dt; d.x+=22*dt;
+      if (d.y>=this.horizon) {
+        s.ripples.push({x:d.x, y:this.horizon, r:1, a:0.5});
+        s.seeps.push({x:d.x, y:this.horizon+2, a:0.5, r:this.rnd(5,11), v:this.rnd(14,26)});
+        s.drops.splice(i,1);
+      }
+    }
+    for (let i=s.ripples.length-1;i>=0;i--) { const r=s.ripples[i]; r.r+=34*dt; r.a-=dt*1.3; if(r.a<=0) s.ripples.splice(i,1); }
+    for (let i=s.seeps.length-1;i>=0;i--) {
+      const p=s.seeps[i]; p.y+=p.v*dt; p.a-=dt*0.14; p.r+=dt*3;
+      if(p.a<=0||p.y>this.H) s.seeps.splice(i,1);
+    }
+    const soaked = this.clamp(s.seeps.length/60, 0, 1);
+
+    /* shoot */
+    const maxH = this.horizon*0.84;
+    if (s.germ > 0.35) {
+      const etiol = 1.65-0.95*e.L, wf = e.W<0.28 ? this.clamp(e.W/0.28,0.25,1) : (e.W>0.86?0.72:1);
+      const nf = 0.6+0.55*e.N, diel = 0.35+0.9*e.day;
+      const tip = s.stem[s.stem.length-1];
+      const hFrac = this.clamp((s.seed.y-tip.y)/Math.max(1,this.horizon*0.8), 0, 1);
+      if (hFrac >= 0.995) s.capped = true;
+      const rate = 7.5*etiol*wf*nf*diel*(1-Math.pow(hFrac,1.6));
+      s.stemAcc += rate*dt;
+      while (s.stemAcc >= 2.4 && (s.seed.y-s.stem[s.stem.length-1].y) < maxH) {
+        s.stemAcc -= 2.4;
+        const t2 = s.stem[s.stem.length-1];
+        s.stemAngle += this.rnd(-0.05,0.05)+(-Math.PI/2-s.stemAngle)*0.25;
+        const hFracTip = this.clamp((s.seed.y-(t2.y+Math.sin(s.stemAngle)*2.4))/Math.max(1,maxH),0,1);
+        const wBase=6.4, wTip=2.2;
+        const w = (wBase+(wTip-wBase)*Math.pow(hFracTip,0.7))*(0.85+0.55*e.L*(0.45+0.55*e.N))*(0.7+0.35*e.W);
+        s.stem.push({x:t2.x+Math.cos(s.stemAngle)*2.4, y:t2.y+Math.sin(s.stemAngle)*2.4, w:Math.max(1.8,w), mw:Math.max(1.8,w), light:e.L});
+        s.stemLen += 2.4;
+        if (s.stemLen >= s.nextLeaf && s.leaves.length < 8) {
+          const row = s.leaves.length/2;
+          const prof = [0.6,1,0.95,0.72,0.55,0.45][Math.min(5,row)];
+          s.nextLeaf = s.stemLen+(maxH/3.8)*(0.9+0.35*(1-e.L));
+          const size = (30+52*(0.35+0.65*e.L))*(0.7+0.7*e.N)*(0.75+0.35*e.W)*prof;
+          const idx = s.stem.length-1;
+          for (const side of [-1,1]) s.leaves.push({i:idx, side, size, open:0, age:0, yellow:0, edge:0, droop:0, curl:0, light:e.L, nutr:e.N, ph:this.rnd(0,6.3)});
+        }
+      }
+      for (let i=0;i<s.stem.length-8;i++) s.stem[i].w = Math.min(s.stem[i].mw*1.25, s.stem[i].w+dt*0.03*(0.4+e.L));
+    }
+
+    /* leaves */
+    const nLf = s.leaves.length;
+    for (let k=0;k<nLf;k++) {
+      const lf=s.leaves[k];
+      lf.open = Math.min(1,lf.open+dt/1.8);
+      lf.age += dayStep;
+      const rank = nLf>2 ? 1-k/(nLf-1) : 1;
+      lf.yellow = this.clamp(lf.yellow+dayStep*Math.max(0,0.34-e.N)*1.6*rank*Math.min(1,lf.age/1.2),0,1);
+      lf.edge   = this.clamp(lf.edge+dayStep*(e.W>0.85?(e.W-0.85)*6:-0.25),0,1);
+      const dT = this.clamp((0.3-e.W)/0.3,0,1)*0.9+e.night*0.3;
+      lf.droop += (Math.min(1,dT)-lf.droop)*dt*0.7;
+      lf.curl  += (this.clamp((0.3-e.W)/0.3,0,1)*0.9-lf.curl)*dt*0.6;
+    }
+
+    /* flowers & fruit */
+    const daysOld = s.t/spd;
+    if (s.capped && daysOld>10 && s.fruits.length<5 && e.N>0.25 && e.W>0.2 && e.L>0.3) {
+      s.flowerT -= dayStep;
+      if (s.flowerT <= 0) {
+        s.flowerT = this.rnd(1.4,3);
+        const hi = Math.max(6, Math.floor(s.stem.length*this.rnd(0.62,0.95)));
+        s.fruits.push({i:Math.min(s.stem.length-2,hi), side:Math.random()<0.5?-1:1, bloom:0, set:0, grow:0, ripe:0, ph:this.rnd(0,6.3)});
+      }
+    }
+    for (const fr of s.fruits) {
+      fr.bloom = Math.min(1, fr.bloom+dayStep/1.2);
+      if (fr.bloom >= 1) {
+        fr.set = Math.min(1, fr.set+dayStep/1.6);
+        if (fr.set>0.12 && !fr.dropped) {
+          fr.dropped = 1; s.petals = s.petals||[];
+          const pp = this.s.draw[Math.min(this.s.draw.length-1,fr.i)] || s.seed;
+          for (let k=0;k<6;k++) s.petals.push({x:pp.x+fr.side*10, y:pp.y+6, vx:this.rnd(-11,11), vy:this.rnd(-5,7), rot:this.rnd(0,6.3), spin:this.rnd(-1.6,1.6), a:1, r:this.rnd(5.5,10)});
+        }
+      }
+      if (fr.set >= 1) {
+        const good = (0.35+0.65*e.L)*(e.W<0.2?0.3:1)*(0.5+0.6*e.N);
+        fr.grow = Math.min(1, fr.grow+dayStep*0.18*good);
+        if (fr.grow>0.75) fr.ripe = Math.min(1, fr.ripe+dayStep*0.13*(0.4+0.8*e.L));
+      }
+    }
+    s.petals = s.petals||[];
+    for (let i=s.petals.length-1;i>=0;i--) {
+      const q=s.petals[i];
+      q.vy+=26*dt; q.vx*=0.985;
+      q.x+=(q.vx+Math.sin(s.t*2+q.rot)*6)*dt; q.y+=q.vy*dt; q.rot+=q.spin*dt;
+      if (q.y>this.horizon-2) { q.y=this.horizon-2; q.vy=0; q.vx*=0.7; q.a-=dt*0.5; }
+      else q.a-=dt*0.08;
+      if (q.a<=0) s.petals.splice(i,1);
+    }
+
+    /* roots */
+    if (s.germ > 0.2) {
+      const wEff = this.clamp(e.W+soaked*0.25,0,1);
+      const dry=1+1.5*(1-wEff), wet=wEff>0.8?0.42:1;
+      const nut=1.35-0.75*e.N, sug=0.5+0.55*e.L;
+      const fruitTax = s.fruits.some(fr=>fr.set>0)?0.7:1;
+      for (let i=0;i<s.roots.length;i++) {
+        const r=s.roots[i]; if (!r.alive) continue;
+        r.brown = this.clamp(r.brown+dayStep*(wEff>0.85?1.6:-0.7),0,1);
+        const rate = 1.4*dry*wet*nut*sug*fruitTax*Math.pow(0.84,r.order);
+        r.acc += rate*dt;
+        while (r.acc >= 3) {
+          r.acc -= 3;
+          const p = r.pts[r.pts.length-1];
+          const spread = r.order===0 ? 0 : (r.hb||0)*Math.max(0,1-r.len/(260+160*(1-wEff)));
+          const target = Math.PI/2-spread*1.35;
+          const grav   = r.order===0?0.3:(r.order===1?0.06:0.04);
+          r.ang += this.rnd(-0.3,0.3)*(1+r.order*0.2)+(target-r.ang)*grav;
+          const nw = Math.max(0.5, r.w*(1-0.0045*r.pts.length));
+          let np = {x:p.x+Math.cos(r.ang)*3, y:p.y+Math.sin(r.ang)*3, w:nw};
+          if (np.y>this.H-8) { r.ang=(Math.cos(r.ang)>=0?0:Math.PI)+this.rnd(-0.15,0.12); np={x:p.x+Math.cos(r.ang)*3, y:Math.min(p.y+1,this.H-9), w:nw}; }
+          if (np.x<10) { r.ang=this.rnd(0.15,0.9); np.x=10+Math.random()*2; }
+          if (np.x>this.W-10) { r.ang=Math.PI-this.rnd(0.15,0.9); np.x=this.W-10-Math.random()*2; }
+          if (r.pts.length>420) { r.alive=false; break; }
+          r.pts.push(np); r.len+=3;
+          const deepEnough = r.order===0 ? r.len>14 : np.y>this.horizon+(this.H-this.horizon)*0.18;
+          const bp = r.order===0 ? 0.12*rootDens : 0.06*rootDens*(1-0.2*e.N);
+          if (deepEnough && r.order<5 && s.roots.length<96 && Math.random()<bp) {
+            const dir=Math.random()<0.5?-1:1;
+            const sb = r.order===0 ? dir*this.rnd(1.0,1.45) : dir*this.rnd(0.55,1.2);
+            s.roots.push({pts:[{x:np.x,y:np.y,w:nw*(r.order===0?0.72:0.62)}],
+              ang:Math.PI/2+sb*0.8, order:r.order+1, w:nw*(r.order===0?0.72:0.62),
+              alive:true, acc:0, len:0, brown:r.brown, hb:dir*this.rnd(0.55,1.1)});
+          }
+        }
+      }
+      s.budT = (s.budT||0)-dt;
+      if (s.budT<=0 && s.roots.length<96) {
+        s.budT = (5+5*e.N)/(0.5+rootDens);
+        const midY = this.horizon+(this.H-this.horizon)*0.3;
+        const cands = s.roots.filter(r=>r.pts.length>20&&r.order<4&&r.pts[r.pts.length-1].y>midY);
+        if (cands.length) {
+          const par = cands[(Math.random()*cands.length)|0];
+          const idx = Math.max(6, Math.floor(par.pts.length*0.45)+((Math.random()*(par.pts.length*0.5))|0));
+          const bpt = par.pts[Math.min(par.pts.length-2,idx)], dir=Math.random()<0.5?-1:1;
+          s.roots.push({pts:[{x:bpt.x,y:bpt.y,w:bpt.w*0.6}],
+            ang:Math.PI/2-dir*this.rnd(0.8,1.3), order:par.order+1, w:bpt.w*0.6,
+            alive:true, acc:0, len:0, brown:par.brown, hb:dir*this.rnd(0.6,1.1)});
+        }
+      }
+    }
+
+    /* transport particles */
+    const tap = s.roots[0];
+    s.waterT -= dt;
+    if (s.waterT<=0 && s.stem.length>6) {
+      s.waterT = 0.4/(0.35+0.9*e.day+soaked)*(e.W<0.2?2.4:1);
+      s.parts.push({kind:'w', mode:0, root:tap, u:this.rnd(0.35,1), a:0});
+    }
+    s.sugarT -= dt;
+    if (s.sugarT<=0 && s.leaves.length>0) {
+      s.sugarT = 0.9/(0.25+1.1*e.day);
+      const lf = s.leaves[(Math.random()*s.leaves.length)|0];
+      if (lf.open>0.4 && e.day>0.08) s.parts.push({kind:'s', mode:1, u:s.stem.length>1?lf.i/(s.stem.length-1):0, a:0, root:s.roots[(Math.random()*s.roots.length)|0]});
+    }
+    const vf = 0.45+1.3*e.day+0.5*soaked;
+    for (let i=s.parts.length-1;i>=0;i--) {
+      const p=s.parts[i]; p.a=Math.min(1,p.a+dt*3);
+      if (p.kind==='w') {
+        if (p.mode===0) { p.u-=dt*0.5*vf; if(p.u<=0){p.mode=1;p.u=0;} }
+        else { p.u+=dt*0.34*vf; if(p.u>=1) s.parts.splice(i,1); }
+      } else {
+        if (p.mode===1) { p.u-=dt*0.3*vf; if(p.u<=0){p.mode=0;p.u=0;} }
+        else { p.u+=dt*0.4*vf; if(p.u>=0.75) s.parts.splice(i,1); }
+      }
+    }
+
+    /* worms */
+    s.wormT -= dt;
+    if (s.wormT<=0 && this.showWorms) {
+      s.wormT = this.rnd(9,18);
+      const dir = Math.random()<0.5?1:-1;
+      s.worms.push({x:dir>0?-60:this.W+60, y:this.horizon+this.rnd(0.25,0.9)*(this.H-this.horizon), dir, ph:this.rnd(0,6.3), v:this.rnd(9,16)});
+    }
+    for (let i=s.worms.length-1;i>=0;i--) {
+      const w=s.worms[i]; w.x+=w.dir*w.v*dt; w.y+=Math.sin(s.t*0.7+w.ph)*4*dt;
+      if (w.x<-90||w.x>this.W+90) s.worms.splice(i,1);
+    }
+  }
+
+  /* ── draw helpers ─────────────────────────────────────── */
+  skyColors(f) {
+    const key = [
+      {p:0.00,c:[[16,22,42],[26,34,58],[42,46,66]]},
+      {p:0.20,c:[[38,52,86],[92,82,104],[176,122,108]]},
+      {p:0.27,c:[[104,140,178],[204,168,156],[248,196,152]]},
+      {p:0.38,c:[[128,176,214],[196,216,228],[246,226,194]]},
+      {p:0.52,c:[[126,178,222],[186,214,234],[232,232,216]]},
+      {p:0.68,c:[[136,172,206],[212,200,186],[244,214,168]]},
+      {p:0.80,c:[[110,124,168],[206,150,128],[248,178,118]]},
+      {p:0.89,c:[[42,52,88],[104,76,96],[176,106,92]]},
+      {p:1.00,c:[[16,22,42],[26,34,58],[42,46,66]]}
+    ];
+    let a=key[0], b=key[key.length-1];
+    for (let i=0;i<key.length-1;i++) if(f>=key[i].p&&f<=key[i+1].p){a=key[i];b=key[i+1];break;}
+    const t=(f-a.p)/Math.max(0.0001,b.p-a.p);
+    return [this.mix(a.c[0],b.c[0],t), this.mix(a.c[1],b.c[1],t), this.mix(a.c[2],b.c[2],t)];
+  }
+
+  celestial(f) {
+    const a=0.22, b=0.86;
+    if (f>=a && f<=b) {
+      const p=(f-a)/(b-a);
+      return {sun:true, x:this.W*(0.1+0.8*p), y:this.horizon-Math.sin(Math.PI*p)*this.horizon*0.74};
+    }
+    let p = f>b ? (f-b)/(1-b+a) : (f+1-b)/(1-b+a);
+    return {sun:false, x:this.W*(0.86-0.72*p), y:this.horizon-Math.sin(Math.PI*p)*this.horizon*0.62};
+  }
+
+  stemDraw() {
+    const s=this.s, e=this.env();
+    const amp=(4.5+3*(1-e.W)+2*e.L)*(0.45+0.55*e.day);
+    const base=s.seed.y, out=[];
+    for (let i=0;i<s.stem.length;i++) {
+      const p=s.stem[i];
+      const fr=this.clamp((base-p.y)/Math.max(1,this.horizon*0.8),0,1);
+      out.push({x:p.x+Math.sin(s.t*1.15+p.y*0.012)*amp*fr*fr, y:p.y, w:p.w, light:p.light});
+    }
+    return out;
+  }
+
+  posOn(pts, u) {
+    if (!pts||pts.length<2) return (pts&&pts[0])||{x:0,y:0};
+    const f=this.clamp(u,0,1)*(pts.length-1);
+    const i=Math.floor(f), t=f-i;
+    const a=pts[i], b=pts[Math.min(pts.length-1,i+1)];
+    return {x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t};
+  }
+
+  /* ── main draw ────────────────────────────────────────── */
+  draw() {
+    const ctx=this.ctx, s=this.s, e=this.env();
+    const W=this.W, H=this.H, hz=this.horizon, f=e.f;
+    ctx.clearRect(0,0,W,H);
+    const sky=this.skyColors(f);
+    const dim=0.55+0.45*(this.state.sunlight/100);
+
+    /* sky gradient */
+    const g=ctx.createLinearGradient(0,0,0,hz);
+    g.addColorStop(0,   this.rgb(this.mix([12,14,24],sky[0],dim)));
+    g.addColorStop(0.55,this.rgb(this.mix([16,18,28],sky[1],dim)));
+    g.addColorStop(1,   this.rgb(this.mix([20,20,30],sky[2],dim)));
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,hz+1);
+
+    /* stars */
+    if (e.night > 0.05) {
+      for (const st of s.stars) {
+        ctx.fillStyle='rgba(236,240,255,'+(0.15+0.55*Math.abs(Math.sin(s.t*0.6+st.ph)))*e.night+')';
+        ctx.beginPath(); ctx.arc(st.x,st.y,st.r,0,6.2832); ctx.fill();
+      }
+    }
+
+    /* celestial glow — no jumping disc */
+    const cel=this.celestial(f);
+    const glowR=Math.max(110,W*0.4)*(cel.sun?1:0.55);
+    const gg=ctx.createRadialGradient(cel.x,cel.y,2,cel.x,cel.y,glowR);
+    if (cel.sun) {
+      const warm=this.mix([255,186,132],[255,246,214],e.day);
+      gg.addColorStop(0,this.rgb(warm,0.55*(0.35+0.65*e.day)*dim));
+      gg.addColorStop(0.35,this.rgb(warm,0.16*dim));
+      gg.addColorStop(1,this.rgb(warm,0));
+    } else {
+      const mp=this.moonPhase();
+      gg.addColorStop(0,'rgba(206,222,255,'+(0.08+0.34*mp.k)*e.night+')');
+      gg.addColorStop(1,'rgba(206,222,255,0)');
+    }
+    ctx.fillStyle=gg; ctx.fillRect(0,0,W,hz+1);
+    const gold=this.goldenness(f);
+
+    /* soil layers */
+    const wetk=this.clamp(e.W+this.clamp(s.seeps.length/60,0,1)*0.2,0,1);
+    const night=e.night;
+    const bands=[[152,118,86],[126,94,66],[102,74,51],[80,57,39]];
+    const soilH=H-hz;
+    for (let i=0;i<bands.length;i++) {
+      let c=bands[i];
+      c=this.mix(this.mix(c,[196,174,148],(1-wetk)*0.5),[44,40,44],Math.max(0,wetk-0.4)*0.55);
+      c=this.mix(c,[28,30,44],night*0.45);
+      ctx.fillStyle=this.rgb(c);
+      const y0=hz+[0,0.13,0.34,0.62][i]*soilH;
+      ctx.beginPath(); ctx.moveTo(0,y0);
+      for (let x=0;x<=W;x+=18) ctx.lineTo(x,y0+Math.sin(x*0.011+i*2.3)*7+Math.sin(x*0.031+i)*3);
+      ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
+    }
+    for (const sp of s.speckles) {
+      ctx.fillStyle=this.rgb(this.mix(sp.organic?this.mix(sp.c,[48,60,34],0.6):sp.c,[30,32,46],night*0.5), sp.a*(0.6+0.5*(1-wetk)));
+      ctx.beginPath(); ctx.arc(sp.x,sp.y,sp.r,0,6.2832); ctx.fill();
+    }
+    for (const p of s.seeps) {
+      const sg2=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+      sg2.addColorStop(0,'rgba(46,66,84,'+0.5*p.a+')');
+      sg2.addColorStop(1,'rgba(46,66,84,0)');
+      ctx.fillStyle=sg2; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.2832); ctx.fill();
+    }
+    if (wetk>0.78) {
+      ctx.fillStyle='rgba(38,58,74,'+(wetk-0.78)*1.5+')';
+      ctx.fillRect(0,hz+soilH*0.2,W,soilH);
+    }
+
+    /* worms */
+    ctx.lineCap='round';
+    for (const w of s.worms) {
+      ctx.strokeStyle='rgba(58,34,28,0.22)'; ctx.lineWidth=5.5;
+      ctx.beginPath();
+      for (let k=0;k<=22;k++) {
+        const x=w.x+w.dir*k*3.4, y=w.y+Math.sin(s.t*2.4+w.ph+k*0.42)*4.5*(1-Math.abs(k/22-0.5));
+        k===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    }
+
+    /* horizon line + ripples */
+    ctx.fillStyle='rgba(255,244,224,'+(0.12+0.28*(1-night))+')'; ctx.fillRect(0,hz-1,W,1.4);
+    ctx.fillStyle='rgba(52,36,24,0.3)'; ctx.fillRect(0,hz+0.4,W,2);
+    for (const r of s.ripples) {
+      ctx.strokeStyle='rgba(206,232,246,'+Math.max(0,r.a)+')'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.ellipse(r.x,r.y,r.r,r.r*0.3,0,0,6.2832); ctx.stroke();
+    }
+
+    /* roots */
+    ctx.lineCap='round';
+    const rootShade=1-night*0.35;
+    for (const r of s.roots) {
+      const tipCol=this.mix([243,237,224],[136,96,62],r.brown);
+      for (let i=1;i<r.pts.length;i++) {
+        const a=r.pts[i-1], b=r.pts[i];
+        const nearTip=i/r.pts.length;
+        let c=this.mix([242,236,222],tipCol,Math.max(0,nearTip-0.7)/0.3);
+        c=this.mix(c,[120,122,140],night*0.35);
+        ctx.strokeStyle=this.rgb(c, 0.92*rootShade+0.08);
+        ctx.lineWidth=Math.max(0.6,b.w);
+        ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+      }
+      if (r.w<2.4 && r.pts.length>4) {
+        ctx.strokeStyle='rgba(250,246,236,'+0.32*rootShade+')'; ctx.lineWidth=0.65;
+        const start=Math.max(1,r.pts.length-14);
+        for (let i=start;i<r.pts.length;i++) {
+          const a=r.pts[i-1], b=r.pts[i];
+          const dx=b.x-a.x, dy=b.y-a.y, L=Math.hypot(dx,dy)||1;
+          const nx=-dy/L, ny=dx/L, sgn=i%2?1:-1, hl=4+((i*7)%4);
+          ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.x+nx*sgn*hl, b.y+ny*sgn*hl+1.5); ctx.stroke();
+        }
+      }
+    }
+
+    /* seed — fades out fully as germination completes */
+    const seedAlpha = Math.max(0, 1 - s.germ * 1.5);
+    if (seedAlpha > 0.01) {
+      ctx.save(); ctx.translate(s.seed.x, s.seed.y);
+      ctx.fillStyle = 'rgba(206,176,132,' + seedAlpha + ')';
+      for (const sd of [-1,1]) {
+        ctx.save(); ctx.rotate(sd*s.germ*0.5);
+        ctx.beginPath(); ctx.ellipse(sd*s.germ*3,0,6.5,4.6,0,0,6.2832); ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    /* stem */
+    const sp=this.stemDraw(); s.draw=sp;
+    for (let i=1;i<sp.length;i++) {
+      const a=sp[i-1], b=sp[i];
+      const dx=b.x-a.x, dy=b.y-a.y, L2=Math.hypot(dx,dy)||1;
+      const nx=-dy/L2, ny=dx/L2, w0=a.w/2, w1=b.w/2;
+      /* hypocotyl colour blend: bottom few segments fade from reddish-brown to green */
+      const baseBlend = i < 6 ? Math.pow(Math.max(0, 1 - i/6), 1.4) * s.germ : 0;
+      let col = this.mix([204,216,158],[104,142,66], b.light*(0.5+0.5*e.N));
+      col = this.mix(col, [148,102,64], baseBlend * 0.9); // hypocotyl reddish at base
+      col = this.mix(col,[46,58,60],night*0.5);
+      ctx.fillStyle=this.rgb(col);
+      ctx.beginPath();
+      ctx.moveTo(a.x+nx*w0,a.y+ny*w0); ctx.lineTo(b.x+nx*w1,b.y+ny*w1);
+      ctx.lineTo(b.x-nx*w1,b.y-ny*w1); ctx.lineTo(a.x-nx*w0,a.y-ny*w0);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.arc(b.x,b.y,w1,0,6.2832); ctx.fill();
+    }
+
+    /* soil-blend collar — erases the stem-root junction knot */
+    if (sp.length > 2 && s.germ > 0.1) {
+      const baseX = sp[0].x; // no sway at base (fr=0), so x = s.seed.x
+      const baseW = sp[0].w * 1.6 + 14;
+      /* match top-layer soil colour exactly */
+      let soilC = this.mix(this.mix(bands[0],[196,174,148],(1-wetk)*0.5),[44,40,44],Math.max(0,wetk-0.4)*0.55);
+      soilC = this.mix(soilC,[28,30,44],night*0.45);
+      /* gradient: opaque at depth, fading to transparent at the soil surface */
+      const cg = ctx.createLinearGradient(baseX, hz+34, baseX, hz-3);
+      cg.addColorStop(0,   this.rgb(soilC, 1));
+      cg.addColorStop(0.45, this.rgb(soilC, 0.92));
+      cg.addColorStop(1,   this.rgb(soilC, 0));
+      ctx.fillStyle = cg;
+      ctx.beginPath();
+      ctx.ellipse(baseX, hz+16, baseW, 34, 0, 0, 6.2832);
+      ctx.fill();
+    }
+
+    /* leaves */
+    for (const lf of s.leaves) {
+      const p=sp[Math.min(sp.length-1,lf.i)]; if (!p) continue;
+      const op=1-Math.pow(1-lf.open,3);
+      const len=lf.size*op, wid=len*(0.44-0.1*lf.curl);
+      const sway=Math.sin(s.t*1.5+lf.ph)*0.07*(0.4+0.7*e.day);
+      const ang=(-0.42+lf.droop*1.25+sway)*lf.side;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.scale(lf.side,1); ctx.rotate(ang*lf.side);
+      let green=this.mix([196,214,140],[58,110,52],lf.light*(0.4+0.6*lf.nutr));
+      let col=this.mix(green,[216,200,96],lf.yellow*0.85);
+      col=this.mix(col,[40,58,62],night*0.5);
+      ctx.fillStyle=this.rgb(col,0.97);
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.bezierCurveTo(len*0.28,-wid*(1-lf.curl*0.5),len*0.72,-wid*0.85,len,-len*0.06*lf.curl);
+      ctx.bezierCurveTo(len*0.72,wid*0.9,len*0.3,wid*(1-lf.curl*0.2),0,0);
+      ctx.closePath(); ctx.fill();
+      if (lf.edge>0.02) { ctx.strokeStyle='rgba(224,206,104,'+lf.edge*0.85*(1-night*0.5)+')'; ctx.lineWidth=1.8+lf.edge; ctx.stroke(); }
+      ctx.strokeStyle=this.rgb(this.mix(this.mix([140,170,88],[48,88,42],lf.light*(0.4+0.6*lf.nutr)),[46,60,62],night*0.55),0.5);
+      ctx.lineWidth=Math.max(0.5,len*0.022);
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(len*0.52,wid*0.08,len,-len*0.05*lf.curl); ctx.stroke();
+      const nv=Math.round(2+len/18); ctx.lineWidth=Math.max(0.4,len*0.013);
+      for (let v=1;v<=nv;v++) {
+        const vt=v/(nv+1), mx=len*vt, my=wid*0.08*vt;
+        const vl=wid*0.72*Math.sin(Math.PI*vt)*(0.7-0.3*lf.curl);
+        ctx.beginPath(); ctx.moveTo(mx,my); ctx.quadraticCurveTo(mx+len*0.06,my-vl*0.55,mx+len*0.07,-vl*(1-lf.curl*0.3)); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(mx,my); ctx.quadraticCurveTo(mx+len*0.06,my+vl*0.35,mx+len*0.07,vl*0.75); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    /* apical bud */
+    if (sp.length > 2) {
+      const tip=sp[sp.length-1], prev=sp[Math.max(0,sp.length-6)];
+      const ang=Math.atan2(tip.y-prev.y,tip.x-prev.x);
+      const bw=Math.max(3.2,tip.w*0.95), bl=bw*3.4+6;
+      let bc=this.mix([206,224,150],[128,168,78],(this.state.sunlight/100)*(0.45+0.55*e.N));
+      bc=this.mix(bc,[48,60,60],night*0.5);
+      ctx.save(); ctx.translate(tip.x,tip.y); ctx.rotate(ang);
+      for (const sd of [-1,1]) {
+        ctx.fillStyle=this.rgb(this.mix(bc,[76,112,58],0.25),0.95);
+        ctx.beginPath(); ctx.moveTo(-bw*0.6,0);
+        ctx.quadraticCurveTo(bl*0.45,sd*bw*1.25,bl*0.96,sd*bw*0.1);
+        ctx.quadraticCurveTo(bl*0.5,sd*bw*0.25,-bw*0.6,0);
+        ctx.closePath(); ctx.fill();
+      }
+      const bg2=ctx.createLinearGradient(-bw,0,bl,0);
+      bg2.addColorStop(0,this.rgb(bc));
+      bg2.addColorStop(1,this.rgb(this.mix(bc,[252,248,214],0.45)));
+      ctx.fillStyle=bg2;
+      ctx.beginPath(); ctx.moveTo(-bw*0.9,bw*0.75);
+      ctx.quadraticCurveTo(bl*0.35,bw*0.5,bl,0);
+      ctx.quadraticCurveTo(bl*0.35,-bw*0.5,-bw*0.9,-bw*0.75);
+      ctx.quadraticCurveTo(-bw*1.5,0,-bw*0.9,bw*0.75);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
+    /* flowers & fruit */
+    for (const fr of s.fruits) {
+      const p=sp[Math.min(sp.length-1,fr.i)]; if (!p) continue;
+      const be=1-Math.pow(1-fr.bloom,3);
+      const bob=Math.sin(s.t*1.5+fr.ph), sag=fr.grow*20;
+      const px=p.x+fr.side*(11+13*fr.grow)+bob*1.8, py=p.y+4+sag+Math.abs(bob)*0.6;
+      ctx.strokeStyle=this.rgb(this.mix([132,156,88],[48,60,58],night*0.5),0.9);
+      ctx.lineWidth=2.2+fr.grow*2; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.quadraticCurveTo(p.x+fr.side*9,p.y+1+sag*0.35,px,py); ctx.stroke();
+      const petal=this.clamp(1-fr.set*1.5,0,1);
+      if (petal>0.02) {
+        const R=16*be*(0.5+0.5*petal), rot=s.t*0.12+fr.ph;
+        const pale=this.mix([255,252,246],[198,204,226],night*0.65);
+        const blush=this.mix([250,224,222],[166,168,198],night*0.65);
+        for (let k=0;k<6;k++) {
+          const a2=(k/6)*6.2832+rot, pr=R*(0.92+0.1*Math.sin(s.t*1.8+k));
+          const cxp=px+Math.cos(a2)*pr*0.72, cyp=py+Math.sin(a2)*pr*0.72;
+          const pgr=ctx.createRadialGradient(px,py,0,cxp,cyp,pr);
+          pgr.addColorStop(0,this.rgb(pale,0.96*petal));
+          pgr.addColorStop(1,this.rgb(blush,0.62*petal));
+          ctx.fillStyle=pgr;
+          ctx.beginPath(); ctx.ellipse(cxp,cyp,pr*0.8,pr*0.5,a2,0,6.2832); ctx.fill();
+        }
+        const cg2=ctx.createRadialGradient(px,py,0,px,py,R*0.5);
+        cg2.addColorStop(0,this.rgb(this.mix([252,224,132],[150,140,108],night*0.6),petal));
+        cg2.addColorStop(1,this.rgb(this.mix([228,176,76],[120,112,92],night*0.6),0));
+        ctx.fillStyle=cg2; ctx.beginPath(); ctx.arc(px,py,R*0.5,0,6.2832); ctx.fill();
+      }
+      if (fr.set>0.05) {
+        const swell=1-Math.pow(1-fr.grow,2), ripeStage=fr.ripe;
+        let c=ripeStage<0.35 ? this.mix([138,182,92],[214,198,72],ripeStage/0.35)
+                               : this.mix([214,198,72],[206,56,44],(ripeStage-0.35)/0.65);
+        c=this.mix(c,[56,46,52],night*0.45);
+        const jitter=fr.jitter||(fr.jitter=this.rnd(0.82,1.22));
+        const R=(4+18*swell)*jitter*(1+0.035*Math.sin(s.t*2.1+fr.ph));
+        if (fr.ripe>0.55) {
+          const hal=ctx.createRadialGradient(px,py,R*0.6,px,py,R*2.4);
+          hal.addColorStop(0,this.rgb(c,0.22*(fr.ripe-0.55)*2));
+          hal.addColorStop(1,this.rgb(c,0));
+          ctx.fillStyle=hal; ctx.beginPath(); ctx.arc(px,py,R*2.4,0,6.2832); ctx.fill();
+        }
+        const fg=ctx.createRadialGradient(px-R*0.32,py-R*0.38,R*0.08,px,py,R*1.05);
+        fg.addColorStop(0,this.rgb(this.mix(c,[255,255,244],0.4)));
+        fg.addColorStop(0.7,this.rgb(c));
+        fg.addColorStop(1,this.rgb(this.mix(c,[58,30,26],0.35)));
+        ctx.fillStyle=fg; ctx.beginPath(); ctx.arc(px,py,R,0,6.2832); ctx.fill();
+        ctx.fillStyle='rgba(255,255,248,'+0.38*(1-night*0.7)+')';
+        ctx.beginPath(); ctx.ellipse(px-R*0.34,py-R*0.4,R*0.22,R*0.14,-0.6,0,6.2832); ctx.fill();
+        if (fr.ripe<0.4) {
+          ctx.fillStyle='rgba(220,206,96,'+(1-fr.ripe/0.4)*0.4+')';
+          for (let k=0;k<4;k++) {
+            const sa=fr.ph+k*1.57, sr=R*0.55;
+            ctx.beginPath(); ctx.arc(px+Math.cos(sa)*sr,py+Math.sin(sa)*sr,R*0.12,0,6.2832); ctx.fill();
+          }
+        }
+      }
+    }
+    for (const q of (s.petals||[])) {
+      ctx.save(); ctx.translate(q.x,q.y); ctx.rotate(q.rot);
+      ctx.fillStyle=this.rgb(this.mix([255,248,242],[196,200,220],night*0.6),0.85*Math.max(0,q.a));
+      ctx.beginPath(); ctx.ellipse(0,0,q.r,q.r*0.5,0,0,6.2832); ctx.fill();
+      ctx.restore();
+    }
+
+    /* ── soft atmospheric sunlight — smooth haze, no discrete bands ── */
+    if (cel.sun && e.day > 0.06 && this.rayCtx) {
+      const rc  = this.rayCtx;
+      const rW  = this.rayCv.width, rH = this.rayCv.height;
+      rc.clearRect(0, 0, rW, rH);
+
+      const strength = Math.pow(e.day, 1.1) * (0.35 + 0.65 * this.state.sunlight / 100) * (1 + 0.7 * gold);
+      const rayC = this.mix([255,238,198], [255,206,138], gold);
+      const rs   = 'rgba(' + Math.round(rayC[0]) + ',' + Math.round(rayC[1]) + ',' + Math.round(rayC[2]) + ',';
+
+      /* 1 — large radial haze from the sun: the dominant atmospheric scatter */
+      const hazeR = Math.hypot(rW, rH) * 0.9;
+      const haze  = rc.createRadialGradient(cel.x, cel.y, 0, cel.x, cel.y, hazeR);
+      haze.addColorStop(0,    rs + (0.26 * strength) + ')');
+      haze.addColorStop(0.10, rs + (0.13 * strength) + ')');
+      haze.addColorStop(0.40, rs + (0.04 * strength) + ')');
+      haze.addColorStop(1,    rs + '0)');
+      rc.fillStyle = haze;
+      rc.fillRect(0, 0, rW, rH);
+
+      /* 2 — 20 thin triangular rays fanned in a ~72° cone toward the canvas centre.
+             Each ray is very faint; the heavy blur blends them into a seamless gradient
+             with no visible band edges. */
+      const baseAng = Math.atan2(hz * 0.88 - cel.y, rW * 0.5 - cel.x);
+      const rayLen  = Math.hypot(rW, rH) * 1.2;
+      for (let k = 0; k < 20; k++) {
+        const t   = k / 19;                                // 0 → 1
+        const ang = baseAng + (t - 0.5) * Math.PI * 0.72; // ±64.8° cone
+        const ex  = cel.x + Math.cos(ang) * rayLen;
+        const ey  = cel.y + Math.sin(ang) * rayLen;
+        const rnx = -Math.sin(ang), rny = Math.cos(ang);
+        const wid = 4 + 22 * Math.sin(t * Math.PI);       // wide in the middle, narrow at edges
+        const op  = 0.034 * strength * (0.3 + 0.7 * Math.sin(t * Math.PI));
+        const lg  = rc.createLinearGradient(cel.x, cel.y, ex, ey);
+        lg.addColorStop(0,    rs + op + ')');
+        lg.addColorStop(0.50, rs + (op * 0.35) + ')');
+        lg.addColorStop(1,    rs + '0)');
+        rc.fillStyle = lg;
+        rc.beginPath();
+        rc.moveTo(cel.x, cel.y);                           // all rays start at the sun
+        rc.lineTo(ex + rnx * wid, ey + rny * wid);
+        rc.lineTo(ex - rnx * wid, ey - rny * wid);
+        rc.closePath();
+        rc.fill();
+      }
+
+      /* 3 — soft halo near the plant tip */
+      const plantTip = sp.length > 3 ? sp[Math.max(0, sp.length - 3)] : { x: rW * 0.5, y: hz * 0.5 };
+      const hgl = rc.createRadialGradient(plantTip.x, plantTip.y, 2, plantTip.x, plantTip.y, 95);
+      hgl.addColorStop(0, 'rgba(255,246,210,' + 0.13 * strength + ')');
+      hgl.addColorStop(1, 'rgba(255,246,210,0)');
+      rc.fillStyle = hgl;
+      rc.beginPath(); rc.arc(plantTip.x, plantTip.y, 95, 0, 6.2832); rc.fill();
+
+      /* composite onto main canvas with a generous blur to merge everything */
+      ctx.save();
+      ctx.filter = 'blur(20px)';
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(this.rayCv, 0, 0);
+      ctx.restore();
+    }
+
+    /* particles */
+    for (const p of s.parts) {
+      let pos;
+      if (p.mode===0) pos=this.posOn((p.root&&p.root.pts.length>1)?p.root.pts:s.roots[0].pts,p.u);
+      else pos=this.posOn(sp,p.u);
+      if (!pos) continue;
+      const wat=p.kind==='w', rad=wat?2.6:2.2;
+      const pg=ctx.createRadialGradient(pos.x,pos.y,0,pos.x,pos.y,rad*2.2);
+      pg.addColorStop(0,wat?'rgba(186,224,246,'+0.85*p.a+')':'rgba(186,222,126,'+0.8*p.a+')');
+      pg.addColorStop(1,wat?'rgba(140,196,232,0)':'rgba(150,196,96,0)');
+      ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(pos.x,pos.y,rad*2.2,0,6.2832); ctx.fill();
+      ctx.fillStyle=wat?'rgba(228,244,255,'+0.7*p.a+')':'rgba(236,248,206,'+0.6*p.a+')';
+      ctx.beginPath(); ctx.arc(pos.x-0.5,pos.y-0.6,rad*0.45,0,6.2832); ctx.fill();
+    }
+
+    /* rain */
+    if (s.drops.length) {
+      ctx.strokeStyle='rgba(206,230,248,0.5)'; ctx.lineWidth=1.1;
+      ctx.beginPath();
+      for (const d of s.drops) { ctx.moveTo(d.x,d.y); ctx.lineTo(d.x-1.6,d.y-d.len); }
+      ctx.stroke();
+    }
+
+    /* golden hour wash */
+    if (gold>0.01 && cel.sun) {
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      const wgr=ctx.createLinearGradient(cel.x,cel.y,cel.x-(cel.x-W*0.4)*2.2,hz);
+      wgr.addColorStop(0,'rgba(255,196,120,'+0.2*gold+')');
+      wgr.addColorStop(0.6,'rgba(255,178,104,'+0.09*gold+')');
+      wgr.addColorStop(1,'rgba(255,170,96,0)');
+      ctx.fillStyle=wgr; ctx.fillRect(0,0,W,hz+(H-hz)*0.28);
+      ctx.restore();
+    }
+
+    /* night wash + vignette */
+    if (night>0.02) { ctx.fillStyle='rgba(18,26,48,'+night*0.22+')'; ctx.fillRect(0,0,W,H); }
+    const vg=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.35,W/2,H/2,Math.max(W,H)*0.78);
+    vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(28,18,12,0.32)');
+    ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+  }
+}
+
+// boot
+window.addEventListener('DOMContentLoaded', () => { new Rootwatch(); });
+</script>
+</body>
+</html>
