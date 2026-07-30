@@ -121,7 +121,17 @@ class Rootwatch {
     this.secondsPerDay = 8;
     this.rootDensity   = 1;
     this.showWorms     = true;
-    this.MAXP          = 8;      /* population cap — the scene fills up over generations */
+    this.MAXP          = 14;     /* population cap — the scene fills up over generations */
+
+    /* 5 varieties — flower colours, petal counts and fruit colours differ;
+       seedlings mostly inherit the parent's variety with occasional mutation */
+    this.VAR = [
+      { petals:5, pale:[255,251,242], blush:[248,214,206], center:[252,224,132], fruit:[206,56,44]  },
+      { petals:6, pale:[255,236,240], blush:[240,164,180], center:[250,214,120], fruit:[226,122,48] },
+      { petals:5, pale:[252,248,220], blush:[236,214,150], center:[240,196,96],  fruit:[126,84,168] },
+      { petals:6, pale:[240,236,252], blush:[196,180,226], center:[248,220,140], fruit:[224,178,54] },
+      { petals:5, pale:[255,246,238], blush:[244,196,186], center:[244,208,120], fruit:[164,32,52]  }
+    ];
 
     this.state = {
       sunlight: 68, water: 55, nutrients: 52,
@@ -245,7 +255,7 @@ class Rootwatch {
   _makeSpeckles() {
     const out = [], soilH = this.H - this.horizon;
     const pal = [[92,66,46],[140,106,72],[61,43,30],[176,148,112],[110,92,58]];
-    for (let i = 0; i < 1100; i++)
+    for (let i = 0; i < 750; i++)
       out.push({ x: Math.random()*this.W, y: this.horizon + Math.pow(Math.random(),0.85)*soilH,
                  r: this.rnd(0.5,2.1), c: pal[(Math.random()*pal.length)|0],
                  a: this.rnd(0.15,0.55), organic: Math.random()<0.18 });
@@ -272,18 +282,21 @@ class Rootwatch {
   }
 
   /* every plant carries its own genes: one grows faster, another smaller/bigger,
-     so generations drift apart and develop independently */
-  _newPlant(x) {
+     with its own variety, so generations drift apart and develop independently */
+  _newPlant(x, variety) {
     const sy = this.horizon + 26;
     const crowd = this.s ? this.s.plants.length : 0;
     const genes = {
       speed: this.rnd(0.78, 1.32),
       size:  this.clamp(this.rnd(0.72, 1.14) * (1 - 0.03 * crowd), 0.5, 1.2)
     };
+    const vIdx = (variety === undefined || Math.random() < 0.25)
+      ? ((Math.random() * this.VAR.length) | 0) : variety;
     const tap = this._rootSpec(0, genes.size);
     const w0 = 6.4 * (0.78 + 0.28 * genes.size);
     return {
       seed: { x, y: sy }, germ: 0, age: 0, genes,
+      variety: vIdx, maxLeaves: [6, 8, 10][(Math.random() * 3) | 0],
       stem: [{ x, y: sy, w: w0, mw: w0, light: 0.6 }],
       stemAngle: -Math.PI/2, stemLen: 0, stemAcc: 0, nextLeaf: 16, capped: false,
       curveAmp: this.rnd(4, 12), curvePh: this.rnd(0, 6.3),
@@ -461,18 +474,18 @@ class Rootwatch {
            pick the spot farthest from every existing plant */
         let bestX = sd.x, bestD = -1;
         for (let a=0;a<8;a++) {
-          const x = a===0 ? sd.x : this.clamp(sd.x + this.rnd(-110,110), this.W*0.06, this.W*0.94);
+          const x = a===0 ? sd.x : this.clamp(sd.x + this.rnd(-170,170), this.W*0.05, this.W*0.95);
           let d = Infinity;
           for (const q of s.plants) d = Math.min(d, Math.abs(q.seed.x - x));
           if (d > bestD) { bestD = d; bestX = x; }
           if (d >= 60) break;
         }
-        s.plants.push(this._newPlant(bestX));
+        s.plants.push(this._newPlant(bestX, sd.variety));
         s.seeds.splice(i,1);
       }
     }
     /* if everything died without offspring, nature starts over */
-    if (!s.plants.length && !s.seeds.length) s.plants.push(this._newPlant(this.W*this.rnd(0.3,0.7)));
+    if (!s.plants.length && !s.seeds.length) s.plants.push(this._newPlant(this.W*this.rnd(0.15,0.85)));
 
     /* falling petals (global) */
     for (let i=s.petals.length-1;i>=0;i--) {
@@ -578,7 +591,7 @@ class Rootwatch {
         const w = (wBase+(wTip-wBase)*Math.pow(hFracTip,0.7))*(0.85+0.55*e.L*(0.45+0.55*e.N))*(0.7+0.35*e.W);
         p.stem.push({x:t2.x+Math.cos(p.stemAngle)*2.4, y:t2.y+Math.sin(p.stemAngle)*2.4, w:Math.max(1.7,w), mw:Math.max(1.7,w), light:e.L});
         p.stemLen += 2.4;
-        if (p.stemLen >= p.nextLeaf && p.leaves.length < 8) {
+        if (p.stemLen >= p.nextLeaf && p.leaves.length < p.maxLeaves) {
           const row = p.leaves.length/2;
           const prof = [0.6,1,0.95,0.72,0.55,0.45][Math.min(5,row)];
           p.nextLeaf = p.stemLen+(maxH/3.8)*(0.9+0.35*(1-e.L));
@@ -618,10 +631,13 @@ class Rootwatch {
       }
     }
 
-    /* flowers & fruit — spaced out along the stem, alternating sides,
-       ripening paced to finish near age 180 */
-    if (p.capped && p.age>55 && p.age<135 && p.fruits.length<p.maxFruits && e.N>0.25 && e.W>0.2 && e.L>0.3 && p.wilt===0) {
-      p.flowerT -= aday;
+    /* flowers & fruit — spaced out along the stem, alternating sides.
+       Every plant sets its 3–5 fruits each season: conditions change the
+       pace and the size, but never cancel reproduction */
+    if ((p.capped || p.age>90) && p.age>50 && p.age<170 && p.stem.length>10 && p.fruits.length<p.maxFruits && p.wilt===0) {
+      const pace = 0.45 + 0.55*((0.4+0.6*e.L)*(0.5+0.5*e.N));
+      p.flowerT -= aday*pace;
+      if (p.age>140) p.flowerT -= aday;   /* late-season catch-up so every fruit still arrives */
       if (p.flowerT <= 0) {
         let hi=0, ok=false;
         for (let a=0;a<10 && !ok;a++) {
@@ -632,8 +648,8 @@ class Rootwatch {
           p.fruitSide *= -1;
           p.fruits.push({i:Math.min(p.stem.length-2,hi), side:p.fruitSide, bloom:0, set:0, grow:0, ripe:0,
                          ph:this.rnd(0,6.3), rot0:this.rnd(0,6.3)});
-          p.flowerT = this.rnd(6,12);
-        } else p.flowerT = this.rnd(2,4);
+          p.flowerT = this.rnd(5,10);
+        } else p.flowerT = this.rnd(1.5,3);
       }
     }
     for (const fr of p.fruits) {
@@ -651,7 +667,10 @@ class Rootwatch {
         const good = (0.35+0.65*e.L)*(e.W<0.2?0.3:1)*(0.5+0.6*e.N);
         fr.grow = Math.min(1, fr.grow+aday*0.014*good);
         if (fr.grow>0.6) fr.ripe = Math.min(1, fr.ripe+aday*0.015*(0.4+0.8*e.L));
-        if (p.age>145) fr.ripe = Math.min(1, fr.ripe+aday*0.033); /* autumn push: ripe by ~180 */
+        if (p.age>145) {                       /* autumn push: grown and ripe by ~180 */
+          fr.grow = Math.min(1, fr.grow+aday*0.02);
+          fr.ripe = Math.min(1, fr.ripe+aday*0.033);
+        }
       }
     }
     /* season's end: fruit detaches, falls, breaks apart and is washed into
@@ -671,9 +690,9 @@ class Rootwatch {
           fr.frag = [];
           const nf2 = 3+((Math.random()*2)|0);
           for (let k=0;k<nf2;k++) fr.frag.push({a:this.rnd(0,6.3), d:this.rnd(0.5,1), r:this.rnd(0.3,0.52)});
-          if (fr.grow>0.15 && s.seeds.length<20) {
+          if (s.seeds.length<30) {   /* every landed fruit sheds a seed */
             s.seeds.push({x:fr.x, y:this.horizon+5, vx:fr.side*this.rnd(14,44)+this.rnd(-10,10),
-                          settled:false, ready:false, parent:p});
+                          settled:false, ready:false, parent:p, variety:p.variety});
           }
         }
       } else if (fr.landed) {
@@ -688,7 +707,7 @@ class Rootwatch {
     /* roots — smooth curving fan: taproot dives, laterals splay outward and
        arc gently down; every root has its own depth + length limit so nothing
        ever piles up or slides along the container floor */
-    const rootCap = s.plants.length<=2 ? 96 : (s.plants.length<=4 ? 68 : 44);
+    const rootCap = s.plants.length<=2 ? 96 : (s.plants.length<=5 ? 64 : 38);
     if (p.germ > 0.2 && p.wilt < 0.7) {
       const wEff = this.clamp(e.W+soaked*0.25,0,1);
       const dry=1+1.5*(1-wEff), wet=wEff>0.8?0.42:1;
@@ -922,7 +941,8 @@ class Rootwatch {
           ctx.lineWidth=Math.max(0.5,(r.pts[i0].w+r.pts[i1].w)/2);
           ctx.beginPath();
           ctx.moveTo(r.pts[i0].x,r.pts[i0].y);
-          for (let i=i0+1;i<=i1;i++) ctx.lineTo(r.pts[i].x,r.pts[i].y);
+          for (let i=i0+2;i<i1;i+=2) ctx.lineTo(r.pts[i].x,r.pts[i].y);  /* 6px steps look identical */
+          ctx.lineTo(r.pts[i1].x,r.pts[i1].y);
           ctx.stroke();
         }
       }
@@ -972,23 +992,40 @@ class Rootwatch {
         ctx.restore();
       }
 
-      /* stem */
+      /* stem — full tapered render while the scene is calm, chunked strokes
+         once the patch is crowded so 14 plants stay at 60 fps */
       const sp=this.stemDraw(p); p.draw=sp;
-      for (let i=1;i<sp.length;i++) {
-        const a=sp[i-1], b=sp[i];
-        const dx=b.x-a.x, dy=b.y-a.y, L2=Math.hypot(dx,dy)||1;
-        const nx=-dy/L2, ny=dx/L2, w0=a.w/2, w1=b.w/2;
+      const stemCol = (i) => {
         const baseBlend = i < 6 ? Math.pow(Math.max(0, 1 - i/6), 1.4) * p.germ : 0;
-        let col = this.mix([204,216,158],[104,142,66], b.light*(0.5+0.5*e.N));
+        let col = this.mix([204,216,158],[104,142,66], (sp[i]?sp[i].light:0.6)*(0.5+0.5*e.N));
         col = this.mix(col, [148,102,64], baseBlend * 0.9);
         col = this.mix(col, [138,104,60], wilt*0.8);
-        col = this.mix(col,[46,58,60],night*0.5);
-        ctx.fillStyle=this.rgb(col);
-        ctx.beginPath();
-        ctx.moveTo(a.x+nx*w0,a.y+ny*w0); ctx.lineTo(b.x+nx*w1,b.y+ny*w1);
-        ctx.lineTo(b.x-nx*w1,b.y-ny*w1); ctx.lineTo(a.x-nx*w0,a.y-ny*w0);
-        ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.arc(b.x,b.y,w1,0,6.2832); ctx.fill();
+        return this.mix(col,[46,58,60],night*0.5);
+      };
+      if (s.plants.length > 4) {
+        const n=sp.length, CH=6;
+        ctx.lineCap='round';
+        for (let c=0;c<CH && n>1;c++) {
+          const i0=Math.floor((n-1)*c/CH), i1=Math.min(n-1,Math.floor((n-1)*(c+1)/CH));
+          if (i1<=i0) continue;
+          ctx.strokeStyle=this.rgb(stemCol((i0+i1)>>1));
+          ctx.lineWidth=Math.max(1.2,(sp[i0].w+sp[i1].w)/2);
+          ctx.beginPath(); ctx.moveTo(sp[i0].x,sp[i0].y);
+          for (let i=i0+1;i<=i1;i++) ctx.lineTo(sp[i].x,sp[i].y);
+          ctx.stroke();
+        }
+      } else {
+        for (let i=1;i<sp.length;i++) {
+          const a=sp[i-1], b=sp[i];
+          const dx=b.x-a.x, dy=b.y-a.y, L2=Math.hypot(dx,dy)||1;
+          const nx=-dy/L2, ny=dx/L2, w0=a.w/2, w1=b.w/2;
+          ctx.fillStyle=this.rgb(stemCol(i));
+          ctx.beginPath();
+          ctx.moveTo(a.x+nx*w0,a.y+ny*w0); ctx.lineTo(b.x+nx*w1,b.y+ny*w1);
+          ctx.lineTo(b.x-nx*w1,b.y-ny*w1); ctx.lineTo(a.x-nx*w0,a.y-ny*w0);
+          ctx.closePath(); ctx.fill();
+          ctx.beginPath(); ctx.arc(b.x,b.y,w1,0,6.2832); ctx.fill();
+        }
       }
 
       /* soil-blend collar — erases the stem-root junction knot */
@@ -1028,12 +1065,14 @@ class Rootwatch {
         ctx.strokeStyle=this.rgb(this.mix(this.mix([140,170,88],[48,88,42],lf.light*(0.4+0.6*lf.nutr)),[46,60,62],night*0.55),0.5);
         ctx.lineWidth=Math.max(0.5,len*0.022);
         ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(len*0.52,wid*0.08,len,-len*0.05*lf.curl); ctx.stroke();
-        const nv=Math.round(2+len/18); ctx.lineWidth=Math.max(0.4,len*0.013);
-        for (let v=1;v<=nv;v++) {
-          const vt=v/(nv+1), mx=len*vt, my=wid*0.08*vt;
-          const vl=wid*0.72*Math.sin(Math.PI*vt)*(0.7-0.3*lf.curl);
-          ctx.beginPath(); ctx.moveTo(mx,my); ctx.quadraticCurveTo(mx+len*0.06,my-vl*0.55,mx+len*0.07,-vl*(1-lf.curl*0.3)); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(mx,my); ctx.quadraticCurveTo(mx+len*0.06,my+vl*0.35,mx+len*0.07,vl*0.75); ctx.stroke();
+        if (s.plants.length<=6) {   /* fine veins only while uncrowded */
+          const nv=Math.round(2+len/18); ctx.lineWidth=Math.max(0.4,len*0.013);
+          for (let v=1;v<=nv;v++) {
+            const vt=v/(nv+1), mx=len*vt, my=wid*0.08*vt;
+            const vl=wid*0.72*Math.sin(Math.PI*vt)*(0.7-0.3*lf.curl);
+            ctx.beginPath(); ctx.moveTo(mx,my); ctx.quadraticCurveTo(mx+len*0.06,my-vl*0.55,mx+len*0.07,-vl*(1-lf.curl*0.3)); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(mx,my); ctx.quadraticCurveTo(mx+len*0.06,my+vl*0.35,mx+len*0.07,vl*0.75); ctx.stroke();
+          }
         }
         ctx.restore();
       }
@@ -1080,13 +1119,15 @@ class Rootwatch {
         const be=1-Math.pow(1-fr.bloom,3);
         const petal=fr.falling?0:this.clamp(1-fr.set*1.5,0,1);
         if (petal>0.02) {
-          /* five soft petals, fixed orientation with only a breath of sway */
+          /* soft petals in the plant's own variety colours, fixed orientation
+             with only a breath of sway */
+          const V=this.VAR[p.variety||0];
           const R=15*be*(0.55+0.45*petal);
           const rot=fr.rot0+Math.sin(s.t*0.8+fr.ph)*0.05;
-          const pale=this.mix([255,251,242],[198,204,226],night*0.65);
-          const blush=this.mix([248,214,206],[166,168,198],night*0.65);
-          for (let k=0;k<5;k++) {
-            const a2=rot+k/5*6.2832;
+          const pale=this.mix(V.pale,[198,204,226],night*0.65);
+          const blush=this.mix(V.blush,[166,168,198],night*0.65);
+          for (let k=0;k<V.petals;k++) {
+            const a2=rot+k/V.petals*6.2832;
             const pr=R*(0.9+0.08*Math.sin(fr.ph*3+k*1.7));
             const cxp=px+Math.cos(a2)*pr*0.55, cyp=py+Math.sin(a2)*pr*0.55;
             const pgr=ctx.createRadialGradient(px,py,R*0.08,cxp,cyp,pr*0.8);
@@ -1098,20 +1139,21 @@ class Rootwatch {
             ctx.restore();
           }
           const cg2=ctx.createRadialGradient(px,py,0,px,py,R*0.36);
-          cg2.addColorStop(0,this.rgb(this.mix([252,224,132],[150,140,108],night*0.6),petal));
-          cg2.addColorStop(1,this.rgb(this.mix([228,176,76],[120,112,92],night*0.6),0.25*petal));
+          cg2.addColorStop(0,this.rgb(this.mix(V.center,[150,140,108],night*0.6),petal));
+          cg2.addColorStop(1,this.rgb(this.mix(this.mix(V.center,[180,130,60],0.4),[120,112,92],night*0.6),0.25*petal));
           ctx.fillStyle=cg2; ctx.beginPath(); ctx.arc(px,py,R*0.36,0,6.2832); ctx.fill();
           /* stamens */
-          ctx.fillStyle=this.rgb(this.mix([236,190,92],[150,140,108],night*0.6),0.9*petal);
+          ctx.fillStyle=this.rgb(this.mix(this.mix(V.center,[200,140,60],0.35),[150,140,108],night*0.6),0.9*petal);
           for (let k2=0;k2<6;k2++) {
             const sa=rot+k2*1.047;
             ctx.beginPath(); ctx.arc(px+Math.cos(sa)*R*0.2,py+Math.sin(sa)*R*0.2,Math.max(0.6,R*0.055),0,6.2832); ctx.fill();
           }
         }
         if (fr.set>0.05) {
+          const V2=this.VAR[p.variety||0];
           const swell=1-Math.pow(1-fr.grow,2), ripeStage=fr.ripe;
           let c=ripeStage<0.35 ? this.mix([138,182,92],[214,198,72],ripeStage/0.35)
-                                 : this.mix([214,198,72],[206,56,44],(ripeStage-0.35)/0.65);
+                                 : this.mix([214,198,72],V2.fruit,(ripeStage-0.35)/0.65);
           c=this.mix(c,[56,46,52],night*0.45);
           const jitter=fr.jitter||(fr.jitter=this.rnd(0.82,1.22));
           const R=(4+18*swell)*jitter*(0.75+0.35*gene.size)*(1+0.035*Math.sin(s.t*2.1+fr.ph));
