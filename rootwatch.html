@@ -89,8 +89,8 @@
           <div style="display: flex; gap: 8px">
             <div id="sp1"  class="spbtn" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,0.2)">1×</div>
             <div id="sp3"  class="spbtn" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,0.2)">3×</div>
+            <div id="sp5"  class="spbtn" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,0.2)">5×</div>
             <div id="sp10" class="spbtn" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,0.2)">10×</div>
-            <div id="sp30" class="spbtn" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,0.2)">30×</div>
           </div>
         </div>
 
@@ -139,7 +139,7 @@ class Rootwatch {
     this._setupSlider('sl-wat', 'water');
     this._setupSlider('sl-nut', 'nutrients');
 
-    [1, 3, 10, 30].forEach(v =>
+    [1, 3, 5, 10].forEach(v =>
       $('sp' + v).addEventListener('click', () => this.setState({ speed: v }))
     );
     $('btn-rain').addEventListener('click',  () => { if (this.s) this.s.raining = 9; });
@@ -196,7 +196,7 @@ class Rootwatch {
       $('sl-'+id+'-fill').style.width = pct;
       $('sl-'+id+'-thumb').style.left = pct;
     });
-    [1, 3, 10, 30].forEach(v => {
+    [1, 3, 5, 10].forEach(v => {
       const el = $('sp'+v), sel = s.speed === v;
       el.style.background = sel ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.06)';
       el.style.color      = sel ? '#241a13' : 'rgba(243,235,221,0.75)';
@@ -261,15 +261,29 @@ class Rootwatch {
   }
 
   /* ── reset ────────────────────────────────────────────── */
+  _rootSpec(order) {
+    const soilH = this.H - this.horizon;
+    if (order === 0) return { maxY: this.H - 18, maxLen: soilH * 1.4 };
+    const o = Math.min(order, 5);
+    const deep = [0, 0.95, 0.85, 0.78, 0.72, 0.66][o];
+    const lenF = [0, 0.90, 0.55, 0.34, 0.22, 0.17][o];
+    return { maxY: this.horizon + soilH * this.rnd(deep * 0.6, deep),
+             maxLen: soilH * lenF * this.rnd(0.7, 1.1) };
+  }
+
   reset() {
-    const sx = this.W * 0.44, sy = this.horizon + 26;
+    const sx = this.clamp(this.nextSeedX || this.W * 0.44, this.W * 0.22, this.W * 0.78);
+    const sy = this.horizon + 26;
+    const tap = this._rootSpec(0);
     this.s = {
       t: 6.0, germ: 0, stemAcc: 0, nextLeaf: 16, wormT: 4, waterT: 0, sugarT: 0,
       stem: [{ x: sx, y: sy, w: 6.4, mw: 6.4, light: 0.6 }],
       stemAngle: -Math.PI/2, stemLen: 0, capped: false,
-      seed: { x: sx, y: sy }, leaves: [], fruits: [], flowerT: 0,
-      roots: [{ pts:[{x:sx, y:sy+2, w:6.4}], ang:Math.PI/2, order:0, w:6.4, alive:true, acc:0, len:0, brown:0 }],
+      seed: { x: sx, y: sy }, leaves: [], fruits: [], flowerT: this.rnd(0,3),
+      roots: [{ pts:[{x:sx, y:sy+2, w:6.4}], ang:Math.PI/2, order:0, w:6.4, alive:true, acc:0, len:0, brown:0, curv:0, maxY:tap.maxY, maxLen:tap.maxLen }],
       parts: [], worms: [], drops: [], seeps: [], ripples: [], rainT: 14, raining: 0,
+      litter: [], petals: [], newSeed: null, wilt: 0, decay: 0,
+      wiltDir: Math.random() < 0.5 ? -1 : 1,
       speckles: this._makeSpeckles(), stars: this._makeStars(), draw: []
     };
     this.setState({ day: 0 });
@@ -315,8 +329,9 @@ class Rootwatch {
   }
 
   stage() {
-    const s = this.s;
+    const s = this.s, d = s.t / this.spd();
     if (s.germ < 1) return 'Germinating';
+    if (d >= 180) return d < 205 ? 'Fruit fall' : (d < 245 ? 'Dieback' : 'Decomposing');
     if (s.fruits.some(fr => fr.ripe > 0.6)) return 'Ripe fruit';
     if (s.fruits.length) return s.fruits.some(fr => fr.set > 0) ? 'Fruiting' : 'Flowering';
     if (s.capped) return 'Mature';
@@ -324,8 +339,13 @@ class Rootwatch {
   }
 
   statusFor(e) {
-    const s = this.s;
+    const s = this.s, d = s.t / this.spd();
     if (s.germ < 1) return 'Germinating — the seed coat is splitting.';
+    if (d >= 180) {
+      if (d < 205) return 'Season’s end — ripe fruit drops and a new seed beds into the soil.';
+      if (d < 245) return 'Dieback — leaves brown and fall; the stem is withering.';
+      return 'Decomposing — the old plant returns to the soil. A new seed waits for day 280.';
+    }
     if (s.raining > 0) return 'Rain — drops soak in and the roots start drinking.';
     if (e.night > 0.75) return 'Night — leaves folded, sugars still travelling down to the roots.';
     if (e.W < 0.2) return 'Thirsty — leaves are curling and the roots are diving for water.';
@@ -360,8 +380,14 @@ class Rootwatch {
     const rootDens = this.rootDensity;
     s.t += dt;
     const dayStep = dt / spd;
+    const daysOld = s.t / spd;
 
-    if (s.germ < 1) s.germ = Math.min(1, s.germ + dt/2.6);
+    /* season: 0–180 growth & ripening · 180–280 fruit fall, wilt, decay · 280 restart */
+    s.wilt  = this.clamp((daysOld - 180) / 60, 0, 1);
+    s.decay = this.clamp((daysOld - 230) / 45, 0, 1);
+    if (daysOld >= 280) { this.reset(); return; }
+
+    if (s.germ < 1) s.germ = Math.min(1, s.germ + dt/12);
 
     /* weather */
     if (s.raining > 0) s.raining = Math.max(0, s.raining - dt);
@@ -370,8 +396,8 @@ class Rootwatch {
       if (s.rainT <= 0) { s.rainT = this.rnd(18,46); s.raining = this.rnd(5,12)*(0.6+e.W); }
     }
     if (s.raining > 0) {
-      const n = Math.ceil(dt*90*(0.5+e.W));
-      for (let i=0;i<n;i++) s.drops.push({x:Math.random()*this.W, y:-this.rnd(0,40), v:this.rnd(320,460), len:this.rnd(7,15)});
+      const n = Math.ceil(dt*75*(0.5+e.W));
+      for (let i=0;i<n;i++) s.drops.push({x:Math.random()*this.W, y:-this.rnd(0,40), v:this.rnd(300,430), r:this.rnd(1.4,2.5)});
     }
     for (let i=s.drops.length-1;i>=0;i--) {
       const d=s.drops[i]; d.y+=d.v*dt; d.x+=22*dt;
@@ -390,13 +416,13 @@ class Rootwatch {
 
     /* shoot */
     const maxH = this.horizon*0.84;
-    if (s.germ > 0.35) {
+    if (s.germ > 0.35 && s.wilt === 0) {
       const etiol = 1.65-0.95*e.L, wf = e.W<0.28 ? this.clamp(e.W/0.28,0.25,1) : (e.W>0.86?0.72:1);
       const nf = 0.6+0.55*e.N, diel = 0.35+0.9*e.day;
       const tip = s.stem[s.stem.length-1];
       const hFrac = this.clamp((s.seed.y-tip.y)/Math.max(1,this.horizon*0.8), 0, 1);
       if (hFrac >= 0.995) s.capped = true;
-      const rate = 7.5*etiol*wf*nf*diel*(1-Math.pow(hFrac,1.6));
+      const rate = 1.9*etiol*wf*nf*diel*(1-Math.pow(hFrac,1.6));
       s.stemAcc += rate*dt;
       while (s.stemAcc >= 2.4 && (s.seed.y-s.stem[s.stem.length-1].y) < maxH) {
         s.stemAcc -= 2.4;
@@ -423,42 +449,95 @@ class Rootwatch {
     const nLf = s.leaves.length;
     for (let k=0;k<nLf;k++) {
       const lf=s.leaves[k];
-      lf.open = Math.min(1,lf.open+dt/1.8);
+      lf.open = Math.min(1,lf.open+dt/10);
       lf.age += dayStep;
       const rank = nLf>2 ? 1-k/(nLf-1) : 1;
       lf.yellow = this.clamp(lf.yellow+dayStep*Math.max(0,0.34-e.N)*1.6*rank*Math.min(1,lf.age/1.2),0,1);
+      if (s.wilt>0) lf.yellow = Math.min(1, lf.yellow+dayStep*(0.03+0.1*s.wilt));
       lf.edge   = this.clamp(lf.edge+dayStep*(e.W>0.85?(e.W-0.85)*6:-0.25),0,1);
-      const dT = this.clamp((0.3-e.W)/0.3,0,1)*0.9+e.night*0.3;
+      const dT = this.clamp((0.3-e.W)/0.3,0,1)*0.9+e.night*0.3+s.wilt*1.3;
       lf.droop += (Math.min(1,dT)-lf.droop)*dt*0.7;
-      lf.curl  += (this.clamp((0.3-e.W)/0.3,0,1)*0.9-lf.curl)*dt*0.6;
+      lf.curl  += (this.clamp(this.clamp((0.3-e.W)/0.3,0,1)*0.9+s.wilt*0.6,0,1)-lf.curl)*dt*0.6;
+    }
+    /* leaf fall during senescence → ground litter */
+    if (s.wilt > 0) {
+      for (let i=s.leaves.length-1;i>=0;i--) {
+        const lf=s.leaves[i];
+        lf.fallDay = lf.fallDay || this.rnd(188,252);
+        if (daysOld > lf.fallDay) {
+          const p = s.draw[Math.min(Math.max(0,s.draw.length-1),lf.i)];
+          if (p) s.litter.push({x:p.x+lf.side*lf.size*0.4, y:p.y, vx:this.rnd(-10,10), vy:0,
+            rot:this.rnd(0,6.3), spin:this.rnd(-1.2,1.2), a:1, r:Math.max(6,lf.size*0.3), yel:lf.yellow});
+          s.leaves.splice(i,1);
+        }
+      }
+    }
+    for (let i=s.litter.length-1;i>=0;i--) {
+      const q=s.litter[i];
+      if (!q.grounded) {
+        q.vy=Math.min(q.vy+20*dt,30); q.vx*=0.99;
+        q.x+=(q.vx+Math.sin(s.t*1.6+q.rot)*9)*dt; q.y+=q.vy*dt; q.rot+=q.spin*dt;
+        if (q.y>=this.horizon-1) { q.y=this.horizon-1; q.grounded=true; q.vy=0; }
+      } else {
+        q.y += dayStep*0.4;             /* slowly worked into the soil */
+        q.a -= dayStep*0.045;           /* ~22 days to decompose */
+      }
+      if (q.a<=0) s.litter.splice(i,1);
     }
 
-    /* flowers & fruit */
-    const daysOld = s.t/spd;
-    if (s.capped && daysOld>10 && s.fruits.length<5 && e.N>0.25 && e.W>0.2 && e.L>0.3) {
+    /* flowers & fruit — the season paces ripening to finish near day 180 */
+    if (s.capped && daysOld>55 && daysOld<135 && s.fruits.length<5 && e.N>0.25 && e.W>0.2 && e.L>0.3 && s.wilt===0) {
       s.flowerT -= dayStep;
       if (s.flowerT <= 0) {
-        s.flowerT = this.rnd(1.4,3);
+        s.flowerT = this.rnd(6,12);
         const hi = Math.max(6, Math.floor(s.stem.length*this.rnd(0.62,0.95)));
         s.fruits.push({i:Math.min(s.stem.length-2,hi), side:Math.random()<0.5?-1:1, bloom:0, set:0, grow:0, ripe:0, ph:this.rnd(0,6.3)});
       }
     }
     for (const fr of s.fruits) {
-      fr.bloom = Math.min(1, fr.bloom+dayStep/1.2);
+      if (fr.falling) continue;
+      fr.bloom = Math.min(1, fr.bloom+dayStep/3);
       if (fr.bloom >= 1) {
-        fr.set = Math.min(1, fr.set+dayStep/1.6);
+        fr.set = Math.min(1, fr.set+dayStep/4);
         if (fr.set>0.12 && !fr.dropped) {
-          fr.dropped = 1; s.petals = s.petals||[];
+          fr.dropped = 1;
           const pp = this.s.draw[Math.min(this.s.draw.length-1,fr.i)] || s.seed;
           for (let k=0;k<6;k++) s.petals.push({x:pp.x+fr.side*10, y:pp.y+6, vx:this.rnd(-11,11), vy:this.rnd(-5,7), rot:this.rnd(0,6.3), spin:this.rnd(-1.6,1.6), a:1, r:this.rnd(5.5,10)});
         }
       }
       if (fr.set >= 1) {
         const good = (0.35+0.65*e.L)*(e.W<0.2?0.3:1)*(0.5+0.6*e.N);
-        fr.grow = Math.min(1, fr.grow+dayStep*0.18*good);
-        if (fr.grow>0.75) fr.ripe = Math.min(1, fr.ripe+dayStep*0.13*(0.4+0.8*e.L));
+        fr.grow = Math.min(1, fr.grow+dayStep*0.014*good);
+        if (fr.grow>0.6) fr.ripe = Math.min(1, fr.ripe+dayStep*0.015*(0.4+0.8*e.L));
+        if (daysOld>145) fr.ripe = Math.min(1, fr.ripe+dayStep*0.033); /* autumn push: ripe by ~day 180 */
       }
     }
+    /* season's end: fruit detaches, falls, beds into the soil; one becomes next year's seed */
+    for (let i=s.fruits.length-1;i>=0;i--) {
+      const fr=s.fruits[i];
+      if (!fr.falling && daysOld>180) {
+        if (fr.set<0.05) { s.fruits.splice(i,1); continue; }  /* unset flowers just wither away */
+        fr.falling = true;
+        const p = s.draw[Math.min(Math.max(0,s.draw.length-1),fr.i)] || s.seed;
+        fr.x = p.x+fr.side*(11+13*fr.grow); fr.y = p.y+4+fr.grow*20; fr.vy = 0; fr.a = 1;
+      }
+      if (fr.falling && !fr.landed) {
+        fr.vy += 260*dt; fr.y += fr.vy*dt; fr.x += fr.side*2*dt;
+        if (fr.y >= this.horizon+3) {
+          fr.landed = true; fr.landDay = daysOld; fr.vy = 0;
+          if (!s.newSeed && fr.grow>0.15) {
+            const nx = this.clamp(fr.x, this.W*0.22, this.W*0.78);
+            s.newSeed = { x: nx, y: this.horizon+7 };
+            this.nextSeedX = nx;
+          }
+        }
+      } else if (fr.landed) {
+        fr.y += dayStep*0.9;                                     /* slowly sinks into the soil */
+        fr.a  = 1-this.clamp((daysOld-fr.landDay)/50,0,1);       /* ~50 days to decompose */
+        if (fr.a<=0.03) s.fruits.splice(i,1);
+      }
+    }
+    if (s.newSeed && s.newSeed.y < this.horizon+26) s.newSeed.y += dayStep*0.35;
     s.petals = s.petals||[];
     for (let i=s.petals.length-1;i>=0;i--) {
       const q=s.petals[i];
@@ -469,8 +548,10 @@ class Rootwatch {
       if (q.a<=0) s.petals.splice(i,1);
     }
 
-    /* roots */
-    if (s.germ > 0.2) {
+    /* roots — smooth curving fan: taproot dives, laterals splay outward and
+       arc gently down; every root has its own depth + length limit so nothing
+       ever piles up or slides along the container floor */
+    if (s.germ > 0.2 && s.wilt < 0.7) {
       const wEff = this.clamp(e.W+soaked*0.25,0,1);
       const dry=1+1.5*(1-wEff), wet=wEff>0.8?0.42:1;
       const nut=1.35-0.75*e.N, sug=0.5+0.55*e.L;
@@ -483,25 +564,31 @@ class Rootwatch {
         while (r.acc >= 3) {
           r.acc -= 3;
           const p = r.pts[r.pts.length-1];
-          const spread = r.order===0 ? 0 : (r.hb||0)*Math.max(0,1-r.len/(260+160*(1-wEff)));
-          const target = Math.PI/2-spread*1.35;
-          const grav   = r.order===0?0.3:(r.order===1?0.06:0.04);
-          r.ang += this.rnd(-0.3,0.3)*(1+r.order*0.2)+(target-r.ang)*grav;
-          const nw = Math.max(0.5, r.w*(1-0.0045*r.pts.length));
-          let np = {x:p.x+Math.cos(r.ang)*3, y:p.y+Math.sin(r.ang)*3, w:nw};
-          if (np.y>this.H-8) { r.ang=(Math.cos(r.ang)>=0?0:Math.PI)+this.rnd(-0.15,0.12); np={x:p.x+Math.cos(r.ang)*3, y:Math.min(p.y+1,this.H-9), w:nw}; }
-          if (np.x<10) { r.ang=this.rnd(0.15,0.9); np.x=10+Math.random()*2; }
-          if (np.x>this.W-10) { r.ang=Math.PI-this.rnd(0.15,0.9); np.x=this.W-10-Math.random()*2; }
-          if (r.pts.length>420) { r.alive=false; break; }
+          /* persistent per-root curvature + faint noise = smooth organic arcs */
+          r.curv = (r.curv||0)*0.9 + this.rnd(-0.055,0.055)*(r.order===0?0.5:1+r.order*0.12);
+          const spread = r.order===0 ? 0 : (r.hb||0)*Math.max(0.25, 1-r.len/(220+140*(1-wEff)));
+          const target = Math.PI/2 - spread*1.15;
+          const pull   = r.order===0 ? 0.22 : 0.07;
+          r.ang += r.curv + (target-r.ang)*pull;
+          /* soft wall steering — curve down and away instead of hard bouncing */
+          if (p.x < 46 || p.x > this.W-46) r.ang += (Math.PI/2 - r.ang)*0.3;
+          r.ang = this.clamp(r.ang, 0.12, Math.PI-0.12);
+          /* taper to a fine hair over the last quarter of the root's run */
+          const endT = this.clamp((r.len/r.maxLen - 0.75)/0.25, 0, 1);
+          const nw = Math.max(0.35, r.w*(1-0.0045*r.pts.length)*(1-endT*0.7));
+          const np = {x:p.x+Math.cos(r.ang)*3, y:p.y+Math.sin(r.ang)*3, w:nw};
+          if (np.y > r.maxY || r.len > r.maxLen || r.pts.length > 420) { r.alive=false; break; }
           r.pts.push(np); r.len+=3;
           const deepEnough = r.order===0 ? r.len>14 : np.y>this.horizon+(this.H-this.horizon)*0.18;
           const bp = r.order===0 ? 0.12*rootDens : 0.06*rootDens*(1-0.2*e.N);
           if (deepEnough && r.order<5 && s.roots.length<96 && Math.random()<bp) {
             const dir=Math.random()<0.5?-1:1;
             const sb = r.order===0 ? dir*this.rnd(1.0,1.45) : dir*this.rnd(0.55,1.2);
+            const spec = this._rootSpec(r.order+1);
             s.roots.push({pts:[{x:np.x,y:np.y,w:nw*(r.order===0?0.72:0.62)}],
               ang:Math.PI/2+sb*0.8, order:r.order+1, w:nw*(r.order===0?0.72:0.62),
-              alive:true, acc:0, len:0, brown:r.brown, hb:dir*this.rnd(0.55,1.1)});
+              alive:true, acc:0, len:0, brown:r.brown, hb:dir*this.rnd(0.55,1.1),
+              curv:0, maxY:Math.min(spec.maxY, this.H-18), maxLen:spec.maxLen});
           }
         }
       }
@@ -514,22 +601,26 @@ class Rootwatch {
           const par = cands[(Math.random()*cands.length)|0];
           const idx = Math.max(6, Math.floor(par.pts.length*0.45)+((Math.random()*(par.pts.length*0.5))|0));
           const bpt = par.pts[Math.min(par.pts.length-2,idx)], dir=Math.random()<0.5?-1:1;
+          const spec = this._rootSpec(par.order+1);
           s.roots.push({pts:[{x:bpt.x,y:bpt.y,w:bpt.w*0.6}],
             ang:Math.PI/2-dir*this.rnd(0.8,1.3), order:par.order+1, w:bpt.w*0.6,
-            alive:true, acc:0, len:0, brown:par.brown, hb:dir*this.rnd(0.6,1.1)});
+            alive:true, acc:0, len:0, brown:par.brown, hb:dir*this.rnd(0.6,1.1),
+            curv:0, maxY:Math.min(spec.maxY, this.H-18), maxLen:spec.maxLen});
         }
       }
     }
+    /* roots brown and stop drinking as the plant dies back */
+    if (s.wilt > 0) for (const r of s.roots) r.brown = Math.min(1, r.brown + dayStep*0.02);
 
     /* transport particles */
     const tap = s.roots[0];
     s.waterT -= dt;
-    if (s.waterT<=0 && s.stem.length>6) {
+    if (s.waterT<=0 && s.stem.length>6 && s.wilt<0.4) {
       s.waterT = 0.4/(0.35+0.9*e.day+soaked)*(e.W<0.2?2.4:1);
       s.parts.push({kind:'w', mode:0, root:tap, u:this.rnd(0.35,1), a:0});
     }
     s.sugarT -= dt;
-    if (s.sugarT<=0 && s.leaves.length>0) {
+    if (s.sugarT<=0 && s.leaves.length>0 && s.wilt<0.4) {
       s.sugarT = 0.9/(0.25+1.1*e.day);
       const lf = s.leaves[(Math.random()*s.leaves.length)|0];
       if (lf.open>0.4 && e.day>0.08) s.parts.push({kind:'s', mode:1, u:s.stem.length>1?lf.i/(s.stem.length-1):0, a:0, root:s.roots[(Math.random()*s.roots.length)|0]});
@@ -590,12 +681,15 @@ class Rootwatch {
 
   stemDraw() {
     const s=this.s, e=this.env();
-    const amp=(4.5+3*(1-e.W)+2*e.L)*(0.45+0.55*e.day);
+    const wilt=s.wilt||0;
+    const amp=(4.5+3*(1-e.W)+2*e.L)*(0.45+0.55*e.day)*(1-0.7*wilt);
     const base=s.seed.y, out=[];
+    const lean=wilt*wilt*(s.wiltDir||1);
     for (let i=0;i<s.stem.length;i++) {
       const p=s.stem[i];
       const fr=this.clamp((base-p.y)/Math.max(1,this.horizon*0.8),0,1);
-      out.push({x:p.x+Math.sin(s.t*1.15+p.y*0.012)*amp*fr*fr, y:p.y, w:p.w, light:p.light});
+      out.push({x:p.x+Math.sin(s.t*1.15+p.y*0.012)*amp*fr*fr+lean*70*fr*fr,
+                y:p.y+wilt*fr*fr*46, w:p.w, light:p.light});
     }
     return out;
   }
@@ -700,7 +794,9 @@ class Rootwatch {
 
     /* roots */
     ctx.lineCap='round';
+    const decay=s.decay||0, wilt=s.wilt||0;
     const rootShade=1-night*0.35;
+    const rootFade=1-0.9*decay;
     for (const r of s.roots) {
       const tipCol=this.mix([243,237,224],[136,96,62],r.brown);
       for (let i=1;i<r.pts.length;i++) {
@@ -708,12 +804,12 @@ class Rootwatch {
         const nearTip=i/r.pts.length;
         let c=this.mix([242,236,222],tipCol,Math.max(0,nearTip-0.7)/0.3);
         c=this.mix(c,[120,122,140],night*0.35);
-        ctx.strokeStyle=this.rgb(c, 0.92*rootShade+0.08);
+        ctx.strokeStyle=this.rgb(c, (0.92*rootShade+0.08)*rootFade);
         ctx.lineWidth=Math.max(0.6,b.w);
         ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
       }
       if (r.w<2.4 && r.pts.length>4) {
-        ctx.strokeStyle='rgba(250,246,236,'+0.32*rootShade+')'; ctx.lineWidth=0.65;
+        ctx.strokeStyle='rgba(250,246,236,'+0.32*rootShade*rootFade+')'; ctx.lineWidth=0.65;
         const start=Math.max(1,r.pts.length-14);
         for (let i=start;i<r.pts.length;i++) {
           const a=r.pts[i-1], b=r.pts[i];
@@ -723,6 +819,20 @@ class Rootwatch {
         }
       }
     }
+
+    /* next year's seed, shed by the fallen fruit — stays visible through decay */
+    if (s.newSeed) {
+      ctx.save(); ctx.translate(s.newSeed.x, s.newSeed.y);
+      ctx.fillStyle='rgba(206,176,132,0.95)';
+      ctx.beginPath(); ctx.ellipse(0,0,5.5,4,0.3,0,6.2832); ctx.fill();
+      ctx.fillStyle='rgba(150,118,80,0.55)';
+      ctx.beginPath(); ctx.ellipse(1.2,1,3.2,2.1,0.3,0,6.2832); ctx.fill();
+      ctx.restore();
+    }
+
+    /* everything above ground fades away as the old plant decomposes */
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - 0.96*decay);
 
     /* seed — fades out fully as germination completes */
     const seedAlpha = Math.max(0, 1 - s.germ * 1.5);
@@ -747,6 +857,7 @@ class Rootwatch {
       const baseBlend = i < 6 ? Math.pow(Math.max(0, 1 - i/6), 1.4) * s.germ : 0;
       let col = this.mix([204,216,158],[104,142,66], b.light*(0.5+0.5*e.N));
       col = this.mix(col, [148,102,64], baseBlend * 0.9); // hypocotyl reddish at base
+      col = this.mix(col, [138,104,60], wilt*0.8);        // browns as it dies back
       col = this.mix(col,[46,58,60],night*0.5);
       ctx.fillStyle=this.rgb(col);
       ctx.beginPath();
@@ -784,6 +895,7 @@ class Rootwatch {
       ctx.save(); ctx.translate(p.x,p.y); ctx.scale(lf.side,1); ctx.rotate(ang*lf.side);
       let green=this.mix([196,214,140],[58,110,52],lf.light*(0.4+0.6*lf.nutr));
       let col=this.mix(green,[216,200,96],lf.yellow*0.85);
+      col=this.mix(col,[142,104,56],wilt*0.75);
       col=this.mix(col,[40,58,62],night*0.5);
       ctx.fillStyle=this.rgb(col,0.97);
       ctx.beginPath(); ctx.moveTo(0,0);
@@ -810,6 +922,7 @@ class Rootwatch {
       const ang=Math.atan2(tip.y-prev.y,tip.x-prev.x);
       const bw=Math.max(3.2,tip.w*0.95), bl=bw*3.4+6;
       let bc=this.mix([206,224,150],[128,168,78],(this.state.sunlight/100)*(0.45+0.55*e.N));
+      bc=this.mix(bc,[130,98,56],wilt*0.85);
       bc=this.mix(bc,[48,60,60],night*0.5);
       ctx.save(); ctx.translate(tip.x,tip.y); ctx.rotate(ang);
       for (const sd of [-1,1]) {
@@ -833,14 +946,22 @@ class Rootwatch {
 
     /* flowers & fruit */
     for (const fr of s.fruits) {
-      const p=sp[Math.min(sp.length-1,fr.i)]; if (!p) continue;
+      let px, py;
+      ctx.save();
+      if (fr.falling) {
+        /* detached: falls, lands, then slowly sinks into the soil and fades */
+        px=fr.x; py=fr.y;
+        ctx.globalAlpha = ctx.globalAlpha * this.clamp(fr.a===undefined?1:fr.a,0,1);
+      } else {
+        const p=sp[Math.min(sp.length-1,fr.i)]; if (!p) { ctx.restore(); continue; }
+        const bob=Math.sin(s.t*1.5+fr.ph), sag=fr.grow*20;
+        px=p.x+fr.side*(11+13*fr.grow)+bob*1.8; py=p.y+4+sag+Math.abs(bob)*0.6;
+        ctx.strokeStyle=this.rgb(this.mix(this.mix([132,156,88],[126,96,54],wilt*0.8),[48,60,58],night*0.5),0.9);
+        ctx.lineWidth=2.2+fr.grow*2; ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.quadraticCurveTo(p.x+fr.side*9,p.y+1+sag*0.35,px,py); ctx.stroke();
+      }
       const be=1-Math.pow(1-fr.bloom,3);
-      const bob=Math.sin(s.t*1.5+fr.ph), sag=fr.grow*20;
-      const px=p.x+fr.side*(11+13*fr.grow)+bob*1.8, py=p.y+4+sag+Math.abs(bob)*0.6;
-      ctx.strokeStyle=this.rgb(this.mix([132,156,88],[48,60,58],night*0.5),0.9);
-      ctx.lineWidth=2.2+fr.grow*2; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.quadraticCurveTo(p.x+fr.side*9,p.y+1+sag*0.35,px,py); ctx.stroke();
-      const petal=this.clamp(1-fr.set*1.5,0,1);
+      const petal=fr.falling?0:this.clamp(1-fr.set*1.5,0,1);
       if (petal>0.02) {
         const R=16*be*(0.5+0.5*petal), rot=s.t*0.12+fr.ph;
         const pale=this.mix([255,252,246],[198,204,226],night*0.65);
@@ -887,6 +1008,7 @@ class Rootwatch {
           }
         }
       }
+      ctx.restore();
     }
     for (const q of (s.petals||[])) {
       ctx.save(); ctx.translate(q.x,q.y); ctx.rotate(q.rot);
@@ -894,6 +1016,18 @@ class Rootwatch {
       ctx.beginPath(); ctx.ellipse(0,0,q.r,q.r*0.5,0,0,6.2832); ctx.fill();
       ctx.restore();
     }
+    /* autumn leaf litter — flutters down, rests on the soil, decomposes */
+    for (const q of (s.litter||[])) {
+      ctx.save(); ctx.translate(q.x,q.y); ctx.rotate(q.rot);
+      let lc=this.mix([196,168,84],[124,88,52],1-(q.yel||0)*0.4);
+      lc=this.mix(lc,[40,36,40],night*0.5);
+      ctx.fillStyle=this.rgb(lc,0.9*Math.max(0,q.a));
+      ctx.beginPath(); ctx.ellipse(0,0,q.r,q.r*0.42,0,0,6.2832); ctx.fill();
+      ctx.restore();
+    }
+
+    /* end of decay-fade group (seed, stem, leaves, bud, fruit, petals, litter) */
+    ctx.restore();
 
     /* ── soft atmospheric sunlight — smooth haze, no discrete bands ── */
     if (cel.sun && e.day > 0.06 && this.rayCtx) {
@@ -972,12 +1106,21 @@ class Rootwatch {
       ctx.beginPath(); ctx.arc(pos.x-0.5,pos.y-0.6,rad*0.45,0,6.2832); ctx.fill();
     }
 
-    /* rain */
+    /* rain — teardrop-shaped droplets: pointed tail up, round belly down */
     if (s.drops.length) {
-      ctx.strokeStyle='rgba(206,230,248,0.5)'; ctx.lineWidth=1.1;
-      ctx.beginPath();
-      for (const d of s.drops) { ctx.moveTo(d.x,d.y); ctx.lineTo(d.x-1.6,d.y-d.len); }
-      ctx.stroke();
+      ctx.fillStyle='rgba(202,228,248,0.6)';
+      for (const d of s.drops) {
+        const r=d.r;
+        ctx.beginPath();
+        ctx.moveTo(d.x, d.y-2.6*r);
+        ctx.quadraticCurveTo(d.x+1.15*r, d.y+0.1*r, d.x, d.y+r);
+        ctx.quadraticCurveTo(d.x-1.15*r, d.y+0.1*r, d.x, d.y-2.6*r);
+        ctx.fill();
+      }
+      ctx.fillStyle='rgba(240,250,255,0.55)';
+      for (const d of s.drops) {
+        if (d.r>1.9) { ctx.beginPath(); ctx.arc(d.x-d.r*0.3, d.y+d.r*0.05, d.r*0.3, 0, 6.2832); ctx.fill(); }
+      }
     }
 
     /* golden hour wash */
@@ -1000,7 +1143,7 @@ class Rootwatch {
 }
 
 // boot
-window.addEventListener('DOMContentLoaded', () => { new Rootwatch(); });
+window.addEventListener('DOMContentLoaded', () => { window.__rw = new Rootwatch(); });
 </script>
 </body>
 </html>
