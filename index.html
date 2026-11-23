@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Animate — Living Simulations</title>
+<meta name="description" content="Animate is a small collection of living simulations you can watch grow and respond in real time.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2e9da">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1b1309">
+<meta property="og:title" content="Animate — Living Simulations">
+<meta property="og:description" content="Animate is a small collection of living simulations you can watch grow and respond in real time.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231b1309'/%3E%3Cpath d='M16 27V14' stroke='%237d9e6e' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M16 17C11 17 8 13 8 9c4 0 8 3 8 8zM16 14c0-5 3-8 8-8 0 4-3 8-8 8z' fill='%237d9e6e'/%3E%3C/svg%3E">
+<script>try{var s=localStorage.getItem('animate-theme');if(s==='light'||s==='dark')document.documentElement.dataset.theme=s;}catch(e){}</script>
 <!-- Fonts load in real browsers (Cloudflare / localhost). Artifact CSP blocks CDNs; Georgia/system-ui fallbacks apply there. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,43 +23,67 @@
   --ground:   #f2e9da;
   --surface:  #e9dece;
   --ink:      #1b1309;
-  --muted:    rgba(27,19,9,0.42);
-  --accent:   #b88e28;
-  --sage:     #567248;
+  --muted:    rgba(27,19,9,0.66);
+  --accent:   #80601a;
+  --sage:     #4a6340;
   --rule:     rgba(27,19,9,0.11);
   --hover:    rgba(27,19,9,0.04);
+  --glass:        rgba(250,244,234,0.50);
+  --glass-solid:  rgba(246,239,227,0.94);
+  --glass-border: rgba(255,255,255,0.55);
+  --glow-gold:    rgba(214,166,64,0.30);
+  --glow-sage:    rgba(112,150,96,0.28);
+  --glow-dusk:    rgba(116,112,190,0.22);
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --ground:  #1b1309;
     --surface: #241a0f;
     --ink:     #f0e8d8;
-    --muted:   rgba(240,232,216,0.4);
+    --muted:   rgba(240,232,216,0.6);
     --accent:  #c8a055;
     --sage:    #7d9e6e;
     --rule:    rgba(240,232,216,0.09);
     --hover:   rgba(240,232,216,0.04);
+    --glass:        rgba(36,26,15,0.48);
+    --glass-solid:  rgba(36,26,15,0.94);
+    --glass-border: rgba(240,232,216,0.12);
+    --glow-gold:    rgba(200,150,60,0.20);
+    --glow-sage:    rgba(110,150,96,0.17);
+    --glow-dusk:    rgba(96,90,170,0.22);
   }
 }
 :root[data-theme="dark"] {
   --ground:  #1b1309;
   --surface: #241a0f;
   --ink:     #f0e8d8;
-  --muted:   rgba(240,232,216,0.4);
+  --muted:   rgba(240,232,216,0.6);
   --accent:  #c8a055;
   --sage:    #7d9e6e;
   --rule:    rgba(240,232,216,0.09);
   --hover:   rgba(240,232,216,0.04);
+  --glass:        rgba(36,26,15,0.48);
+  --glass-solid:  rgba(36,26,15,0.94);
+  --glass-border: rgba(240,232,216,0.12);
+  --glow-gold:    rgba(200,150,60,0.20);
+  --glow-sage:    rgba(110,150,96,0.17);
+  --glow-dusk:    rgba(96,90,170,0.22);
 }
 :root[data-theme="light"] {
   --ground:   #f2e9da;
   --surface:  #e9dece;
   --ink:      #1b1309;
-  --muted:    rgba(27,19,9,0.42);
-  --accent:   #b88e28;
-  --sage:     #567248;
+  --muted:    rgba(27,19,9,0.66);
+  --accent:   #80601a;
+  --sage:     #4a6340;
   --rule:     rgba(27,19,9,0.11);
   --hover:    rgba(27,19,9,0.04);
+  --glass:        rgba(250,244,234,0.50);
+  --glass-solid:  rgba(246,239,227,0.94);
+  --glass-border: rgba(255,255,255,0.55);
+  --glow-gold:    rgba(214,166,64,0.30);
+  --glow-sage:    rgba(112,150,96,0.28);
+  --glow-dusk:    rgba(116,112,190,0.22);
 }
 
 /* ── reset ───────────────────────────────────────────────── */
@@ -62,6 +95,19 @@ body {
   color: var(--ink);
   font-family: 'DM Sans', system-ui, sans-serif;
   min-height: 100vh;
+  position: relative;
+  isolation: isolate;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42vmax 42vmax at 10% 12%, var(--glow-gold), transparent 70%),
+    radial-gradient(38vmax 38vmax at 88% 34%, var(--glow-sage), transparent 70%),
+    radial-gradient(46vmax 46vmax at 55% 96%, var(--glow-dusk), transparent 70%);
 }
 
 /* ── header ─────────────────────────────────────────────── */
@@ -109,18 +155,38 @@ body {
   line-height: 1;
   color: var(--muted);
 }
+.theme-toggle {
+  align-self: flex-end;
+  margin-top: 10px;
+  padding: 6px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 99px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(15px) saturate(1.2);
+  backdrop-filter: blur(15px) saturate(1.2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── grid ────────────────────────────────────────────────── */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
-  gap: 1px;
-  background: var(--rule);
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 520px));
+  gap: clamp(16px, 2.5vw, 28px);
+  padding: clamp(24px,4vw,52px) clamp(24px,6vw,72px);
+  background: transparent;
 }
 
 /* ── card ────────────────────────────────────────────────── */
 .card {
-  background: var(--ground);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  overflow: hidden;
   text-decoration: none;
   color: inherit;
   display: flex;
@@ -149,12 +215,16 @@ body {
   transition: opacity 0.18s;
   pointer-events: none;
 }
-.card:hover .card-open { opacity: 1; }
+.card:hover .card-open,
+.card:focus-visible .card-open { opacity: 1; }
+@media (hover: none) {
+  .card-open { opacity: 1; }
+}
 .card-open-pill {
   padding: 9px 20px;
   border-radius: 99px;
   background: var(--accent);
-  color: #1b1309;
+  color: var(--ground);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -162,10 +232,25 @@ body {
 
 .card-body {
   padding: 18px 22px 22px;
-  border-top: 1px solid var(--rule);
+  border: 1px solid var(--glass-border);
+  border-radius: 0 0 15px 15px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(15px) saturate(1.2);
+  backdrop-filter: blur(15px) saturate(1.2);
   display: flex;
   flex-direction: column;
   gap: 9px;
+}
+@media (max-width: 640px) {
+  .card-body, .theme-toggle {
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    backdrop-filter: blur(12px) saturate(1.2);
+  }
+  .hd-aside { text-align: left; align-items: flex-start; }
+  .theme-toggle { align-self: flex-start; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card-body, .theme-toggle { background: var(--glass-solid); }
 }
 .card-tag {
   font-size: 11px;
@@ -215,6 +300,7 @@ body {
   <div class="hd-aside">
     <span class="hd-label">in collection</span>
     <span class="hd-count">1</span>
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to dark theme">Dark</button>
   </div>
 </header>
 
@@ -241,6 +327,35 @@ body {
 </footer>
 
 <script>
+/* ── theme toggle ───────────────────────────────────────── */
+(function () {
+  const root = document.documentElement;
+  const btn  = document.getElementById('theme-toggle');
+  const sys  = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  function saved() {
+    try { const v = localStorage.getItem('animate-theme'); return (v === 'light' || v === 'dark') ? v : null; }
+    catch (e) { return null; }
+  }
+  function apply(theme) {
+    root.dataset.theme = theme;
+    if (btn) {
+      btn.textContent = theme === 'dark' ? 'Light' : 'Dark';
+      btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+    }
+  }
+  apply(saved() || (sys && sys.matches ? 'dark' : 'light'));
+  if (btn) btn.addEventListener('click', function () {
+    const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('animate-theme', next); } catch (e) {}
+    apply(next);
+  });
+  if (sys) {
+    const onSys = function (e) { if (!saved()) apply(e.matches ? 'dark' : 'light'); };
+    if (sys.addEventListener) sys.addEventListener('change', onSys);
+    else if (sys.addListener) sys.addListener(onSys);
+  }
+})();
+
 /* ── Rootwatch miniature thumbnail ──────────────────────── */
 (function () {
   const cv  = document.getElementById('cv-rw');
@@ -258,7 +373,8 @@ body {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     hz = H * 0.56;
   }
-  const ro = new ResizeObserver(resize);
+  const rm = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  const ro = new ResizeObserver(function () { resize(); if (rm && rm.matches) renderStatic(); });
   ro.observe(cv.parentElement || cv);
   resize();
 
@@ -411,6 +527,7 @@ body {
       const y0=hz+[0,0.13,0.36,0.64][i]*soilH;
       ctx.beginPath(); ctx.moveTo(0,y0);
       for (let x=0;x<=W;x+=10) ctx.lineTo(x,y0+Math.sin(x*0.016+i*2.1)*5+Math.sin(x*0.04+i)*2);
+      ctx.lineTo(W,y0+Math.sin(W*0.016+i*2.1)*5+Math.sin(W*0.04+i)*2);
       ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
     }
 
@@ -528,13 +645,39 @@ body {
   }
 
   let last = performance.now();
-  (function loop(now) {
+  let raf = 0;
+  function loop(now) {
     const dt = Math.min(0.05, (now-last)/1000);
     last = now;
     update(dt);
     draw();
-    requestAnimationFrame(loop);
-  })(last);
+    raf = requestAnimationFrame(loop);
+  }
+  function start() {
+    if (raf) return;                      /* never two loops */
+    last = performance.now();
+    loop(last);
+  }
+  function stop() {
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+  }
+  /* reduced motion: reset, pre-simulate, draw one midday frame */
+  function renderStatic() {
+    stemPts.length = 0; rootPts.length = 0; laterals.length = 0;
+    stemAcc = 0; rootAcc = 0;
+    stemAng = -Math.PI / 2; rootAng = Math.PI / 2;
+    t = 0;
+    for (let i = 0; i < 400; i++) update(0.05);
+    t = 0;
+    draw();
+  }
+
+  if (rm && rm.matches) renderStatic(); else start();
+  if (rm) {
+    const onRm = function (e) { if (e.matches) { stop(); renderStatic(); } else start(); };
+    if (rm.addEventListener) rm.addEventListener('change', onRm);
+    else if (rm.addListener) rm.addListener(onRm);
+  }
 })();
 </script>
 
