@@ -9,6 +9,11 @@
   a { color: #cfe0a8; text-decoration: none; }
   a:hover { color: #f0e6d2; }
   .spbtn { transition: background 0.15s, color 0.15s; }
+  /* glass blur for HUD, stage pill and side panel (inline styles cannot hold media queries) */
+  .rw-glass { -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px); }
+  @media (max-width: 640px) {
+    .rw-glass { -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+  }
 </style>
 </head>
 <body>
@@ -28,21 +33,21 @@
 
       <div id="canvas-wrap" style="flex: 1 1 520px; min-width: 280px; border-radius: 26px; overflow: hidden; position: relative; height: clamp(380px, 66vh, 760px); box-shadow: 0 30px 70px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.08)">
         <canvas id="cv" style="width: 100%; height: 100%; display: block"></canvas>
-        <div style="position: absolute; left: 18px; top: 16px; display: flex; align-items: center; gap: 14px; padding: 9px 16px 10px; border-radius: 16px; background: rgba(255,255,255,0.14); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.28); box-shadow: 0 8px 26px rgba(0,0,0,0.2)">
+        <div class="rw-glass" style="position: absolute; left: 18px; top: 16px; display: flex; align-items: center; gap: 14px; padding: 9px 16px 10px; border-radius: 16px; background: rgba(24,18,28,0.66); border: 1px solid rgba(255,255,255,0.28); box-shadow: 0 8px 26px rgba(0,0,0,0.2)">
           <div style="display: flex; align-items: baseline; gap: 7px">
-            <span style="font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(30,22,16,0.6)">day</span>
-            <span id="hud-day" style="font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; line-height: 1; color: #241a13">0</span>
+            <span style="font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(246,239,230,0.9)">day</span>
+            <span id="hud-day" style="font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; line-height: 1; color: #f6efe6">0</span>
           </div>
-          <div style="width: 1px; height: 20px; background: rgba(30,22,16,0.22)"></div>
+          <div style="width: 1px; height: 20px; background: rgba(246,239,230,0.22)"></div>
           <div style="display: flex; align-items: baseline; gap: 8px">
-            <span id="hud-phase" style="font-size: 14px; font-weight: 500; color: #241a13">Night</span>
-            <span id="hud-clock" style="font-size: 12px; color: rgba(30,22,16,0.55)">04:00</span>
+            <span id="hud-phase" style="font-size: 14px; font-weight: 500; color: #f6efe6">Night</span>
+            <span id="hud-clock" style="font-size: 12px; color: rgba(246,239,230,0.9)">04:00</span>
           </div>
         </div>
-        <div id="hud-stage" style="position: absolute; right: 18px; bottom: 16px; padding: 8px 14px 9px; border-radius: 14px; background: rgba(255,255,255,0.12); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.24); font-size: 12px; color: rgba(30,22,16,0.75)">Seed</div>
+        <div id="hud-stage" class="rw-glass" style="position: absolute; right: 18px; bottom: 16px; padding: 8px 14px 9px; border-radius: 14px; background: rgba(24,18,28,0.66); border: 1px solid rgba(255,255,255,0.24); font-size: 12px; color: #f6efe6">Seed</div>
       </div>
 
-      <div style="flex: 0 1 340px; min-width: 260px; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 26px; background: rgba(255,255,255,0.09); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.22); box-shadow: 0 24px 60px rgba(0,0,0,0.35)">
+      <div class="rw-glass" style="flex: 0 1 340px; min-width: 260px; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 26px; background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.22); box-shadow: 0 24px 60px rgba(0,0,0,0.35)">
 
         <div style="font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(243,235,221,0.5)">conditions</div>
 
@@ -149,15 +154,15 @@ class Rootwatch {
     this._setupSlider('sl-nut', 'nutrients');
 
     [1, 3, 5, 10].forEach(v =>
-      $('sp' + v).addEventListener('click', () => this.setState({ speed: v }))
+      $('sp' + v).addEventListener('click', () => { this.setState({ speed: v }); this._staticFrame(0); })
     );
-    $('btn-rain').addEventListener('click',  () => { if (this.s) this.s.raining = 9; });
-    $('btn-reset').addEventListener('click', () => this.reset());
+    $('btn-rain').addEventListener('click',  () => { if (this.s) this.s.raining = 9; this._staticFrame(6); });
+    $('btn-reset').addEventListener('click', () => { this.reset(); this._staticFrame(-1); });
 
     this.measure();
     this.reset();
 
-    this._ro = new ResizeObserver(() => this.measure());
+    this._ro = new ResizeObserver(() => { this.measure(); this._staticFrame(0); });
     this._ro.observe(this.cv.parentElement || this.cv);
 
     this._last = performance.now();
@@ -175,7 +180,47 @@ class Rootwatch {
       this.draw();
       this._raf = requestAnimationFrame(loop);
     };
-    this._raf = requestAnimationFrame(loop);
+    this._loop = loop;
+
+    /* prefers-reduced-motion: no rAF loop, one pre-simulated static frame */
+    this._rm = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    if (this._rm && this._rm.matches) this._staticFrame(-1);
+    else this._raf = requestAnimationFrame(loop);
+    if (this._rm) {
+      const onRm = ev => {
+        if (ev.matches) { this._stopLoop(); this._staticFrame(0); }
+        else this._startLoop();
+      };
+      if (this._rm.addEventListener) this._rm.addEventListener('change', onRm);
+      else if (this._rm.addListener) this._rm.addListener(onRm);
+    }
+  }
+
+  _startLoop() {
+    this._stopLoop();                       /* never two loops */
+    this._last = performance.now();
+    this._raf = requestAnimationFrame(this._loop);
+  }
+  _stopLoop() {
+    if (this._raf) cancelAnimationFrame(this._raf);
+    this._raf = 0;
+  }
+  /* reduced motion only: steps > 0 runs that many update steps first (rain feedback),
+     steps < 0 pre-simulates a bounded growth period and settles on noon, then draws ONE frame */
+  _staticFrame(steps) {
+    if (!(this._rm && this._rm.matches) || !this.s) return;
+    if (steps < 0) {
+      for (let i = 0; i < 3200; i++) this.update(0.075);          /* ≈30 days */
+      for (let i = 0; i < 120; i++) {                             /* ≤1 day to reach noon */
+        const fr = this.dayFrac();
+        if (fr >= 0.48 && fr <= 0.52) break;
+        this.update(0.075);
+      }
+    } else {
+      for (let i = 0; i < steps; i++) this.update(0.075);
+    }
+    this.sync();
+    this.draw();
   }
 
   /* ── helpers ─────────────────────────────────────────── */
@@ -219,6 +264,7 @@ class Rootwatch {
       const r = el.getBoundingClientRect();
       const v = Math.round(this.clamp((ev.clientX - r.left) / r.width, 0, 1) * 100);
       this.setState({ [key]: v });
+      this._staticFrame(0);
     };
     el.addEventListener('pointerdown', ev => {
       dragging = true;
@@ -240,10 +286,13 @@ class Rootwatch {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.horizon = this.H * 0.56;
 
-    /* offscreen canvas for light-ray blur pass */
+    /* offscreen canvas for the light rays at 1/rayRS scale; the smoothed upscale
+       replaces the canvas blur filter (Safari/iOS has none; blur is slow on phones).
+       +1 transparent row so the upscale fades out at the bottom instead of a hard edge */
+    this.rayRS = 14;
     this.rayCv = document.createElement('canvas');
-    this.rayCv.width  = Math.round(this.W);
-    this.rayCv.height = Math.round(this.horizon + 40);
+    this.rayCv.width  = Math.ceil(this.W / this.rayRS);
+    this.rayCv.height = Math.ceil((this.horizon + 40) / this.rayRS) + 1;
     this.rayCtx = this.rayCv.getContext('2d');
 
     if (this.s) {
@@ -1221,9 +1270,11 @@ class Rootwatch {
 
     /* ── soft atmospheric sunlight — smooth haze, no discrete bands ── */
     if (cel.sun && e.day > 0.06 && this.rayCtx) {
-      const rc  = this.rayCtx;
-      const rW  = this.rayCv.width, rH = this.rayCv.height;
-      rc.clearRect(0, 0, rW, rH);
+      const rc  = this.rayCtx, RS = this.rayRS;
+      const rW  = W, rH = hz + 40;   /* logical size; the canvas itself is 1/RS */
+      rc.setTransform(1, 0, 0, 1, 0, 0);
+      rc.clearRect(0, 0, this.rayCv.width, this.rayCv.height);
+      rc.setTransform(1 / RS, 0, 0, 1 / RS, 0, 0);
 
       const strength = Math.pow(e.day, 1.1) * (0.35 + 0.65 * this.state.sunlight / 100) * (1 + 0.7 * gold);
       const rayC = this.mix([255,238,198], [255,206,138], gold);
@@ -1272,9 +1323,10 @@ class Rootwatch {
       rc.beginPath(); rc.arc(plantTip.x, plantTip.y, 95, 0, 6.2832); rc.fill();
 
       ctx.save();
-      ctx.filter = 'blur(20px)';
       ctx.globalCompositeOperation = 'lighter';
-      ctx.drawImage(this.rayCv, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(this.rayCv, 0, 0, this.rayCv.width * RS, this.rayCv.height * RS);
       ctx.restore();
     }
 
