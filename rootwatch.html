@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rootwatch — Animate</title>
+<meta name="description" content="Rootwatch is a living simulation of a seedling growing through day and night, above and below the soil.">
 <style>
   html, body { margin: 0; padding: 0; background: #16110d; }
   * { box-sizing: border-box; }
@@ -14,6 +16,16 @@
   @media (max-width: 640px) {
     .rw-glass { -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
   }
+  /* collapsible Conditions panel — instant, no transition (nothing animates under reduced motion either) */
+  .rw-cond-body { display: flex; flex-direction: column; gap: 14px; flex: 1 1 auto; min-height: 0; }
+  .rw-cond-body[hidden] { display: none; }
+  .rw-cond-collapsed { align-self: flex-start; }
+  .rw-cond-toggle { position: relative; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: 0; padding: 0; border-radius: 50%; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22); color: rgba(243,235,221,0.85); font: inherit; cursor: pointer; }
+  .rw-cond-toggle::before { content: ""; position: absolute; inset: -8px; } /* 28 + 2*8 = 44px touch target */
+  .rw-cond-toggle:hover { background: rgba(255,255,255,0.18); }
+  .rw-cond-toggle:focus-visible { outline: 2px solid #f2d29b; outline-offset: 2px; }
+  .rw-cond-toggle svg { display: block; }
+  .rw-cond-collapsed .rw-cond-toggle svg { transform: rotate(180deg); }
 </style>
 </head>
 <body>
@@ -24,9 +36,9 @@
     <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap">
       <div style="display: flex; flex-direction: column; gap: 2px">
         <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(34px, 5vw, 54px); line-height: 1; letter-spacing: 0.01em; color: #f6efe1">Rootwatch</div>
-        <div style="font-size: 14px; color: rgba(243,235,221,0.55)">A seedling through dawn, noon, dusk and moonlight — above and below the soil.</div>
+        <div style="font-size: 14px; color: rgba(243,235,221,0.62)">A seedling through dawn, noon, dusk and moonlight — above and below the soil.</div>
       </div>
-      <div style="font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(243,235,221,0.4)">live simulation</div>
+      <div style="font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(243,235,221,0.62)">live simulation</div>
     </div>
 
     <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: stretch">
@@ -47,9 +59,14 @@
         <div id="hud-stage" class="rw-glass" style="position: absolute; right: 18px; bottom: 16px; padding: 8px 14px 9px; border-radius: 14px; background: rgba(24,18,28,0.66); border: 1px solid rgba(255,255,255,0.24); font-size: 12px; color: #f6efe6">Seed</div>
       </div>
 
-      <div class="rw-glass" style="flex: 0 1 340px; min-width: 260px; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 26px; background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.22); box-shadow: 0 24px 60px rgba(0,0,0,0.35)">
+      <div id="cond-panel" class="rw-glass" style="flex: 0 1 340px; min-width: 260px; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 26px; background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.22); box-shadow: 0 24px 60px rgba(0,0,0,0.35)">
 
-        <div style="font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(243,235,221,0.5)">conditions</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(243,235,221,0.62)">conditions</div>
+          <button type="button" id="cond-toggle" class="rw-cond-toggle" aria-expanded="true" aria-controls="cond-body" aria-label="Conditions panel"><svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.75 7 5.25l3.5 3.5"/></svg></button>
+        </div>
+
+        <div id="cond-body" class="rw-cond-body">
 
         <div style="display: flex; flex-direction: column; gap: 7px">
           <div style="display: flex; justify-content: space-between; align-items: baseline">
@@ -90,7 +107,7 @@
         <div style="height: 1px; background: rgba(255,255,255,0.14); margin: 4px 0"></div>
 
         <div style="display: flex; flex-direction: column; gap: 9px">
-          <div style="font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(243,235,221,0.5)">time speed</div>
+          <div style="font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(243,235,221,0.62)">time speed</div>
           <div style="display: flex; gap: 8px">
             <div id="sp1"  class="spbtn" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,0.2)">1×</div>
             <div id="sp3"  class="spbtn" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,0.2)">3×</div>
@@ -100,7 +117,7 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 2px">
-          <div style="font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(243,235,221,0.5)">status</div>
+          <div style="font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(243,235,221,0.62)">status</div>
           <div id="status-text" style="font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; line-height: 1.25; color: #f6efe1; text-wrap: pretty; min-height: 54px">Germinating — the seed coat is splitting.</div>
         </div>
 
@@ -109,10 +126,11 @@
           <div id="btn-reset" style="flex:1;text-align:center;padding:12px 10px;border-radius:14px;cursor:pointer;font-size:14px;font-weight:500;color:#241a13;background:rgba(255,255,255,0.86);border:1px solid rgba(255,255,255,0.5);box-shadow:0 8px 22px rgba(0,0,0,0.28)">Reset</div>
         </div>
 
-        <div style="display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 12px; color: rgba(243,235,221,0.55)">
+        <div style="display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 12px; color: rgba(243,235,221,0.62)">
           <span style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:99px;background:rgba(150,200,235,0.9);display:inline-block"></span>water rising</span>
           <span style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:99px;background:rgba(170,210,120,0.9);display:inline-block"></span>sugars sinking</span>
         </div>
+        </div><!-- /cond-body -->
       </div>
     </div>
   </div>
@@ -1383,6 +1401,32 @@ class Rootwatch {
 
 // boot
 window.addEventListener('DOMContentLoaded', () => { window.__rw = new Rootwatch(); });
+
+/* collapsible Conditions panel; the state survives reloads when storage is available */
+function setupConditionsToggle(doc, getStorage) {
+  var KEY = 'rootwatch-conditions-collapsed';
+  var btn = doc.getElementById('cond-toggle');
+  var body = doc.getElementById('cond-body');
+  var panel = doc.getElementById('cond-panel');
+  if (!btn || !body || !panel) return;
+  var storage = null;
+  try { storage = getStorage(); } catch (_) { storage = null; }
+  function apply(collapsed) {
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    body.hidden = collapsed;
+    panel.classList.toggle('rw-cond-collapsed', collapsed);
+  }
+  var saved = null;
+  try { if (storage) saved = storage.getItem(KEY); } catch (_) { saved = null; }
+  apply(saved === '1');
+  btn.addEventListener('click', function () {
+    var collapse = btn.getAttribute('aria-expanded') === 'true';
+    apply(collapse);
+    try { if (storage) storage.setItem(KEY, collapse ? '1' : '0'); } catch (_) {}
+  });
+}
+// run now (the panel markup is above this script), so a saved collapsed state applies before first paint
+setupConditionsToggle(document, function () { return window.localStorage; });
 </script>
 </body>
 </html>
