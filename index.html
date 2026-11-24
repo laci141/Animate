@@ -462,6 +462,12 @@ body::before {
   const bands = [[152,118,86],[124,92,64],[98,70,48],[72,52,35]];
   const soilH_ref = () => H - hz;
 
+  /* sun-ray layer: drawn at 1/RS scale, upscaled with smoothing = soft haze
+     without a canvas blur filter (Safari/iOS has none; blur is slow on phones) */
+  const RS    = 8;
+  const rayCv = document.createElement('canvas');
+  const rayCx = rayCv.getContext('2d');
+
   function draw() {
     ctx.clearRect(0, 0, W, H);
 
@@ -601,9 +607,13 @@ body::before {
 
     /* sun rays — smooth haze, no bands */
     if (sunCurve > 0.06 && celX !== undefined) {
-      ctx.save();
-      ctx.filter='blur(12px)';
-      ctx.globalCompositeOperation='lighter';
+      /* +1 transparent row below the haze so the upscale fades out instead of a hard edge */
+      const rw=Math.ceil(W/RS), rh=Math.ceil((hz+2)/RS)+1;
+      if (rayCv.width!==rw) rayCv.width=rw;
+      if (rayCv.height!==rh) rayCv.height=rh;
+      rayCx.setTransform(1,0,0,1,0,0);
+      rayCx.clearRect(0,0,rw,rh);
+      rayCx.setTransform(1/RS,0,0,1/RS,0,0);
       const strength=Math.pow(sunCurve,1.1)*(1+0.7*golden);
       const rayC=mix([255,238,198],[255,206,138],golden);
       const rs2='rgba('+Math.round(rayC[0])+','+Math.round(rayC[1])+','+Math.round(rayC[2])+',';
@@ -611,12 +621,12 @@ body::before {
       const rLen=Math.hypot(W,hz)*1.15;
       /* large soft haze */
       const hazeR=Math.hypot(W,hz)*0.85;
-      const haze=ctx.createRadialGradient(celX,celY,0,celX,celY,hazeR);
+      const haze=rayCx.createRadialGradient(celX,celY,0,celX,celY,hazeR);
       haze.addColorStop(0,rs2+(0.22*strength)+')');
       haze.addColorStop(0.12,rs2+(0.10*strength)+')');
       haze.addColorStop(0.42,rs2+(0.03*strength)+')');
       haze.addColorStop(1,rs2+'0)');
-      ctx.fillStyle=haze; ctx.fillRect(0,0,W,hz+2);
+      rayCx.fillStyle=haze; rayCx.fillRect(0,0,W,hz+2);
       /* 14 thin rays */
       for(let k=0;k<14;k++){
         const tv=k/13;
@@ -625,13 +635,18 @@ body::before {
         const rnx=-Math.sin(ang),rny=Math.cos(ang);
         const wid=3+16*Math.sin(tv*Math.PI);
         const op=0.03*strength*(0.3+0.7*Math.sin(tv*Math.PI));
-        const lg=ctx.createLinearGradient(celX,celY,ex,ey);
+        const lg=rayCx.createLinearGradient(celX,celY,ex,ey);
         lg.addColorStop(0,rs2+op+')'); lg.addColorStop(0.5,rs2+(op*0.35)+')'); lg.addColorStop(1,rs2+'0)');
-        ctx.fillStyle=lg;
-        ctx.beginPath(); ctx.moveTo(celX,celY);
-        ctx.lineTo(ex+rnx*wid,ey+rny*wid); ctx.lineTo(ex-rnx*wid,ey-rny*wid);
-        ctx.closePath(); ctx.fill();
+        rayCx.fillStyle=lg;
+        rayCx.beginPath(); rayCx.moveTo(celX,celY);
+        rayCx.lineTo(ex+rnx*wid,ey+rny*wid); rayCx.lineTo(ex-rnx*wid,ey-rny*wid);
+        rayCx.closePath(); rayCx.fill();
       }
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      ctx.imageSmoothingEnabled=true;
+      ctx.imageSmoothingQuality='high';
+      ctx.drawImage(rayCv,0,0,rw*RS,rh*RS);
       ctx.restore();
     }
 
